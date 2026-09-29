@@ -110,6 +110,21 @@
 .juryHelpList li b{color:#f2fbfb;font-size:14px}
 .juryHelpList li span{color:#9fc4c8;font-size:13px;line-height:1.5}
 
+/* JOIN REQUIREMENTS TAB */
+.reqTab{display:flex;flex-direction:column;gap:16px;margin-bottom:20px}
+.reqCard{border:1px solid rgba(87,207,204,.18)!important;background:linear-gradient(145deg,#0b2c38,#061d26)!important;border-radius:22px!important;box-shadow:0 16px 40px rgba(0,0,0,.22)!important}
+.reqCard .vkuiTitle{color:#fff!important;margin-bottom:12px!important}
+.reqList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.reqList li{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);color:#c6dfe2;font-size:14px;line-height:1.5}
+.reqList li b{color:#f2fbfb}
+.reqListOrdered{counter-reset:req}
+.reqListOrdered li{position:relative;padding-left:40px}
+.reqListOrdered li::before{counter-increment:req;content:counter(req);position:absolute;left:12px;top:12px;color:#46c8bf;font-weight:800;font-size:13px}
+.reqSteps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;counter-reset:step}
+.reqSteps li{padding:14px 16px 14px 48px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);color:#c6dfe2;font-size:14px;line-height:1.55;position:relative}
+.reqSteps li::before{counter-increment:step;content:counter(step);position:absolute;left:14px;top:14px;width:24px;height:24px;border-radius:50%;background:linear-gradient(145deg,#1bc3b0,#087fa9);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center}
+.reqSteps li b{color:#f2fbfb}
+
 
 /* ABOUT TYPOGRAPHY — readability pass */
 .aboutBlock {
