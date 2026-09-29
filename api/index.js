@@ -2,7 +2,7 @@ import express from "express";
 import crypto from "node:crypto";
 import { put as blobPut } from "@vercel/blob";
 
-import { pool, ensureSchema } from "./_db.js";
+import { pool, ensureSchema, getSetting, setSetting } from "./_db.js";
 import {
   hashPassword,
   verifyPassword,
@@ -20,16 +20,25 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGIN || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
+// Author name and group are withheld from everyone but the organizer until the
+// organizer explicitly reveals them (the names_revealed setting) — jury judges
+// anonymously, and the public gallery only shows poster numbers until then.
+// The contact field (phone/email) is never made public, revealed or not.
 const PUBLIC_COLUMNS = [
   "id", "poster_no", "title", "idea", "problem", "tools", "ai_how",
   "contribution", "interactive", "interactive_url", "image_key", "status",
   "audience_count", "created_at",
 ];
+const PUBLIC_COLUMNS_WITH_NAMES = [...PUBLIC_COLUMNS, "author", "group_name"];
 const ALL_COLUMNS = [
   "id", "poster_no", "title", "idea", "problem", "author", "group_name",
   "contact", "tools", "ai_how", "contribution", "interactive",
   "interactive_url", "image_key", "status", "audience_count", "created_at",
 ];
+
+async function namesRevealed() {
+  return (await getSetting("names_revealed", "false")) === "true";
+}
 const STATUS_VALUES = ["published", "rework", "rejected", "winner"];
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
@@ -143,6 +152,28 @@ app.get("/api/me", (req, res) => {
   );
 });
 
+// ---- settings: whether author names are publicly revealed ----
+// GET is public so the gallery/results pages know whether to show names.
+// PATCH is organizer-only — this is the one switch that decides it, and
+// only the organizer can flip it.
+app.get(
+  "/api/settings",
+  asyncRoute(async (req, res) => {
+    res.json({ namesRevealed: await namesRevealed() });
+  })
+);
+
+app.patch(
+  "/api/settings",
+  asyncRoute(async (req, res) => {
+    requireRole(req, SESSION_SECRET, ["organizer"]);
+    const b = req.body || {};
+    if (typeof b.namesRevealed !== "boolean") return res.status(400).json({ error: "namesRevealed must be a boolean" });
+    await setSetting("names_revealed", b.namesRevealed ? "true" : "false");
+    res.json({ ok: true, namesRevealed: b.namesRevealed });
+  })
+);
+
 // ---- admin: manage jury/organizer accounts ----
 app.get(
   "/api/admin/users",
@@ -181,7 +212,7 @@ app.get(
   asyncRoute(async (req, res) => {
     const session = verifySession(req, SESSION_SECRET);
     const isOrganizer = !!session && session.role === "organizer";
-    const cols = (isOrganizer ? ALL_COLUMNS : PUBLIC_COLUMNS).join(",");
+    const cols = (isOrganizer ? ALL_COLUMNS : (await namesRevealed()) ? PUBLIC_COLUMNS_WITH_NAMES : PUBLIC_COLUMNS).join(",");
     const sql = isOrganizer
       ? `SELECT ${cols} FROM submissions ORDER BY created_at DESC`
       : `SELECT ${cols} FROM submissions WHERE status IN ('published','winner') ORDER BY created_at DESC`;
@@ -196,7 +227,7 @@ app.get(
   asyncRoute(async (req, res) => {
     const session = verifySession(req, SESSION_SECRET);
     const isOrganizer = !!session && session.role === "organizer";
-    const cols = (isOrganizer ? ALL_COLUMNS : PUBLIC_COLUMNS).join(",");
+    const cols = (isOrganizer ? ALL_COLUMNS : (await namesRevealed()) ? PUBLIC_COLUMNS_WITH_NAMES : PUBLIC_COLUMNS).join(",");
     const sql = isOrganizer
       ? `SELECT ${cols} FROM submissions WHERE id=$1`
       : `SELECT ${cols} FROM submissions WHERE id=$1 AND status IN ('published','winner')`;
@@ -274,8 +305,10 @@ app.post(
 app.get(
   "/api/results",
   asyncRoute(async (req, res) => {
+    const revealed = await namesRevealed();
+    const nameCols = revealed ? `s.author, s.group_name as "group",` : "";
     const { rows } = await pool.query(
-      `SELECT s.id, s.poster_no as "posterNo", s.title, s.status,
+      `SELECT s.id, s.poster_no as "posterNo", s.title, ${nameCols} s.status,
               COUNT(sc.id)::int as "juryCount",
               COALESCE(AVG(sc.idea+sc.english+sc.originality+sc.design+sc.digital),0)::float as total
        FROM submissions s
@@ -284,7 +317,7 @@ app.get(
        GROUP BY s.id
        ORDER BY total DESC`
     );
-    res.json({ results: rows });
+    res.json({ results: rows, namesRevealed: revealed });
   })
 );
 

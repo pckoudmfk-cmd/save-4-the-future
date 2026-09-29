@@ -9,7 +9,7 @@ export function hasApi(): boolean {
 export type Role = "jury" | "organizer";
 export type Me = { authenticated: boolean; id?: number; role?: Role; displayName?: string };
 export type Account = { id: number; username: string; role: Role; display_name: string | null; created_at: string };
-export type ResultRow = { id: string; posterNo: number; title: string; status: string; juryCount: number; total: number };
+export type ResultRow = { id: string; posterNo: number; title: string; author?: string; group?: string; status: string; juryCount: number; total: number };
 
 async function request<T = any>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(BASE + path, {
@@ -79,8 +79,13 @@ export const api = {
   setStatus: (id: string, status: Submission["status"]) => request<{ ok: true }>("/api/submissions/" + id + "/status", { method: "PATCH", body: JSON.stringify({ status }) }),
   score: (id: string, score: Score) => request<{ ok: true; total: number }>("/api/submissions/" + id + "/score", { method: "PUT", body: JSON.stringify(score) }),
   reaction: (id: string) => request<{ ok: true }>("/api/submissions/" + id + "/reaction", { method: "POST" }),
-  results: () => request<{ results: ResultRow[] }>("/api/results").then((r) => r.results),
+  results: () => request<{ results: ResultRow[]; namesRevealed: boolean }>("/api/results"),
 
   listAccounts: () => request<{ users: Account[] }>("/api/admin/users").then((r) => r.users),
   createAccount: (username: string, password: string, role: Role) => request<{ ok: true }>("/api/admin/users", { method: "POST", body: JSON.stringify({ username, password, role }) }),
+
+  // Whether the organizer has revealed author names publicly. GET works for
+  // anyone (jury/gallery visitors need to know); only the organizer can PATCH it.
+  getSettings: () => request<{ namesRevealed: boolean }>("/api/settings"),
+  setNamesRevealed: (namesRevealed: boolean) => request<{ ok: true; namesRevealed: boolean }>("/api/settings", { method: "PATCH", body: JSON.stringify({ namesRevealed }) }),
 };

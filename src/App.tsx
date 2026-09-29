@@ -243,6 +243,12 @@ function PosterCard({ w, onClick }: { w: Submission; onClick: () => void }) {
         <Text weight="2">
           #{w.posterNo} · {w.interactive ? "INTERACTIVE" : "DIGITAL POSTER"}
         </Text>
+        {w.author && (
+          <Text className="posterAuthor">
+            {w.author}
+            {w.group ? " · " + w.group : ""}
+          </Text>
+        )}
         <Text className="muted">«Этот постер заставил меня задуматься» · {w.audience}</Text>
       </Div>
     </Card>
@@ -805,6 +811,8 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
   const [accounts, setAccounts] = useState<{ id: number; username: string; role: Role; display_name: string | null }[]>([]);
   const [newAccount, setNewAccount] = useState({ username: "", password: "", role: "jury" as Role });
   const [message, setMessage] = useState("");
+  const [namesRevealed, setNamesRevealedState] = useState<boolean | null>(null);
+  const [revealBusy, setRevealBusy] = useState(false);
 
   const loadWorks = async () => {
     try {
@@ -820,9 +828,17 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
       /* ignore */
     }
   };
+  const loadSettings = async () => {
+    try {
+      setNamesRevealedState((await api.getSettings()).namesRevealed);
+    } catch {
+      /* ignore */
+    }
+  };
   useEffect(() => {
     loadWorks();
     loadAccounts();
+    loadSettings();
   }, []);
 
   const setStatus = async (id: string, status: Submission["status"]) => {
@@ -831,6 +847,22 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
       await loadWorks();
     } catch {
       setMessage("Не удалось изменить статус.");
+    }
+  };
+  const toggleNamesRevealed = async () => {
+    if (namesRevealed === null) return;
+    const next = !namesRevealed;
+    if (next && !window.confirm("Открыть фамилии авторов всем посетителям сайта — в галерее, на страницах постеров и в результатах? Отменить это можно тем же переключателем.")) {
+      return;
+    }
+    setRevealBusy(true);
+    try {
+      await api.setNamesRevealed(next);
+      setNamesRevealedState(next);
+    } catch {
+      setMessage("Не удалось изменить видимость имён.");
+    } finally {
+      setRevealBusy(false);
     }
   };
   const createAccount = async () => {
@@ -854,6 +886,29 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
       <Button mode="secondary" size="s" onClick={logout}>
         Выйти
       </Button>
+      <Card className={namesRevealed ? "revealCard revealCard-on" : "revealCard"}>
+        <Div>
+          <div className="revealHead">
+            <div>
+              <b>Имена авторов</b>
+              <Text className="muted">
+                {namesRevealed === null
+                  ? "Проверяем состояние…"
+                  : namesRevealed
+                  ? "Открыты — видны в галерее, на страницах постеров и в результатах."
+                  : "Скрыты — везде на сайте виден только номер постера, пока вы не откроете имена."}
+              </Text>
+            </div>
+            <Button
+              mode={namesRevealed ? "secondary" : "primary"}
+              disabled={namesRevealed === null || revealBusy}
+              onClick={toggleNamesRevealed}
+            >
+              {revealBusy ? "Обновляем…" : namesRevealed ? "Скрыть имена" : "Открыть имена"}
+            </Button>
+          </div>
+        </Div>
+      </Card>
       <div className="filters">
         <Button mode={tab === "moderation" ? "primary" : "secondary"} onClick={() => setTab("moderation")}>
           Модерация
@@ -927,9 +982,9 @@ function Results() {
     (async () => {
       if (!hasApi()) return;
       try {
-        const rows = await api.results();
+        const { results } = await api.results();
         const map: Record<string, { total: number; juryCount: number }> = {};
-        rows.forEach((r) => (map[r.id] = { total: Math.round(r.total), juryCount: r.juryCount }));
+        results.forEach((r) => (map[r.id] = { total: Math.round(r.total), juryCount: r.juryCount }));
         setAggregated(map);
       } catch {
         /* keep demo fallback */
@@ -947,7 +1002,10 @@ function Results() {
             <Card key={w.id}>
               <div className="resultRow">
                 <b>#{w.posterNo}</b>
-                <span>{w.title}</span>
+                <span>
+                  {w.title}
+                  {w.author && <small className="resultAuthor">{w.author}{w.group ? " · " + w.group : ""}</small>}
+                </span>
                 <strong>{shown}</strong>
               </div>
             </Card>
@@ -1002,7 +1060,7 @@ function Poster({ setView }: { setView: (v: View) => void }) {
       </Page>
     );
   return (
-    <Page title={"Постер #" + w.posterNo} lead={w.title}>
+    <Page title={"Постер #" + w.posterNo} lead={w.author ? `${w.title} · ${w.author}${w.group ? " · " + w.group : ""}` : w.title}>
       <Card className="detailCard">
         <div className="posterDetail">
           {w.imageUrl ? (

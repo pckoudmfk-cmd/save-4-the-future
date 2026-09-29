@@ -72,6 +72,28 @@ export async function ensureSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       UNIQUE(submission_id, jury_user_id)
     );
+
+    -- Small key/value store for admin-controlled site settings, e.g. whether
+    -- author names have been revealed publicly (see names_revealed below).
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
   migrated = true;
+}
+
+// Settings are a simple key/value pair, always read/written as strings by
+// the caller (e.g. "true"/"false" for a boolean flag like names_revealed).
+export async function getSetting(key, fallback) {
+  const { rows } = await pool.query("SELECT value FROM settings WHERE key=$1", [key]);
+  return rows[0] ? rows[0].value : fallback;
+}
+
+export async function setSetting(key, value) {
+  await pool.query(
+    `INSERT INTO settings(key,value) VALUES($1,$2)
+     ON CONFLICT(key) DO UPDATE SET value=excluded.value`,
+    [key, value]
+  );
 }

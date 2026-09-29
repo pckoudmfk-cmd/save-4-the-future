@@ -196,6 +196,12 @@ input,textarea,select{font-size:16px}
   .pageHead .lead,
   .pageHead .vkuiText { font-size: 18px !important; }
 }
+.revealCard{margin-bottom:18px;border:1px solid rgba(230,160,80,.35)!important;background:linear-gradient(145deg,#3a2a0d,#241a08)!important;border-radius:22px!important}
+.revealCard-on{border-color:rgba(87,207,204,.3)!important;background:linear-gradient(145deg,#0b2c38,#061d26)!important}
+.revealHead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.revealHead b{color:#fff;font-size:16px;display:block;margin-bottom:4px}
+.posterAuthor{color:#8fb7bc!important;font-size:13px!important;margin-top:2px}
+.resultAuthor{display:block;color:#8fb7bc;font-size:13px;font-weight:400;margin-top:3px}
 .error{padding:14px;border-radius:12px;background:#3f1414;color:#f2a8a0}
 .fileField{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#a9c0c2}
 .fileField input{color:#eef7f7}
