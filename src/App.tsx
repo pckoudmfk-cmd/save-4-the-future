@@ -506,6 +506,49 @@ function Jury() {
   );
 }
 
+const juryCriteriaHelp: Record<string, string> = {
+  idea: "Насколько ясно и убедительно постер доносит мысль: понятна ли идея с первого взгляда, работает ли она на тему Дня сбережений.",
+  english: "Грамотность и естественность английского языка: орфография, грамматика, уместность формулировок.",
+  originality: "Насколько концепция нестандартна и запоминающаяся, а не повторяет типовые решения.",
+  design: "Визуальная композиция, читаемость, цвет, баланс текста и изображения.",
+  digital: "Насколько осмысленно и уместно использованы ИИ и цифровые инструменты — не просто «есть ИИ», а как он усилил идею.",
+};
+
+function JuryInstructions() {
+  const [open, setOpen] = useState(false);
+  return (
+    <Card className="juryHelp">
+      <Div>
+        <button className="juryHelpToggle" onClick={() => setOpen((v) => !v)}>
+          <b>Памятка: как выставлять оценки</b>
+          <span>{open ? "Свернуть ▲" : "Показать ▼"}</span>
+        </button>
+        {open && (
+          <div className="juryHelpBody">
+            <Text>
+              Каждая работа оценивается по пяти критериям от 0 до 20 баллов (итог — до 100). Оцените каждую работу
+              один раз и сохраните оценку кнопкой «Сохранить оценку». Автор, группа и контакты скрыты намеренно —
+              оценивание анонимное.
+            </Text>
+            <ul className="juryHelpList">
+              {criteria.map(([key, label]) => (
+                <li key={key}>
+                  <b>{label}</b>
+                  <span>{juryCriteriaHelp[key]}</span>
+                </li>
+              ))}
+            </ul>
+            <Text>
+              Ориентир по баллам внутри каждого критерия: 17–20 — отлично, 11–16 — хорошо с замечаниями, 6–10 —
+              слабо выражено, 0–5 — критерий практически не раскрыт.
+            </Text>
+          </div>
+        )}
+      </Div>
+    </Card>
+  );
+}
+
 function JuryWorkspace({ name, logout }: { name: string; logout: () => void }) {
   const [works, setWorks] = useState<Submission[]>([]);
   const [selected, setSelected] = useState("");
@@ -545,6 +588,7 @@ function JuryWorkspace({ name, logout }: { name: string; logout: () => void }) {
       <Button mode="secondary" size="s" onClick={logout}>
         Выйти
       </Button>
+      <JuryInstructions />
       <div className="juryWorkspace">
         <aside className="juryList">
           <div className="juryListHead">
