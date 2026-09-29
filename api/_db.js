@@ -18,6 +18,14 @@ export const pool = new pg.Pool({
   max: 5,
 });
 
+// pg.Pool emits 'error' on the pool itself when an idle client hits a
+// connection-level problem. Without a listener, Node treats that as an
+// uncaught exception and crashes the whole serverless function invocation
+// (no response is ever sent) — so this listener is required, not optional.
+pool.on("error", (err) => {
+  console.error("Unexpected Postgres pool error", err);
+});
+
 let migrated = false;
 
 export async function ensureSchema() {
