@@ -24,7 +24,7 @@ const nav: [View, string, string][] = [
 function Logo() {
   return (
     <div className="logo">
-      <img className="collegeLogo" src={asset("college-logo.png")} alt="Московский финансовый колледж" />
+      <img className="collegeLogo" src={asset("college-logo.webp")} alt="Московский финансовый колледж" />
     </div>
   );
 }
@@ -125,7 +125,7 @@ function ApprovedCover({ setView }: { setView: (v: View) => void }) {
       <div className="coverShell">
         <header className="coverNav">
           <button className="coverLogo" onClick={() => setView("home")} aria-label="Главная">
-            <img src={asset("college-logo.png")} alt="Московский финансовый колледж" />
+            <img src={asset("college-logo.webp")} alt="Московский финансовый колледж" />
           </button>
           <nav className="coverNavLinks">
             {links.map(([id, label]) => (
