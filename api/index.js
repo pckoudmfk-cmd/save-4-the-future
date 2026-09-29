@@ -117,23 +117,31 @@ app.get(
   "/api/setup/bulk-jury",
   asyncRoute(async (req, res) => {
     if (!SETUP_KEY || req.query.key !== SETUP_KEY) return res.status(401).json({ error: "unauthorized" });
-    let accounts;
-    try {
-      accounts = JSON.parse(req.query.accounts || "[]");
-    } catch {
-      return res.status(400).json({ error: "accounts must be a JSON array" });
-    }
+    // Simple "user1:pass1,user2:pass2,..." format — easier to survive URL
+    // re-encoding by intermediate fetchers than a JSON array would be.
+    const raw = String(req.query.accounts || "");
+    const pairs = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => {
+        const i = s.indexOf(":");
+        return i === -1 ? null : [s.slice(0, i), s.slice(i + 1)];
+      })
+      .filter(Boolean);
     const created = [];
-    for (const a of accounts) {
-      if (!a.username || !a.password) continue;
-      const hash = hashPassword(String(a.password));
+    const skipped = [];
+    for (const [username, password] of pairs) {
+      if (!username || !password) continue;
+      const hash = hashPassword(String(password));
       const { rowCount } = await pool.query(
         "INSERT INTO users(username,password_hash,role,display_name) VALUES($1,$2,'jury',$3) ON CONFLICT (username) DO NOTHING",
-        [String(a.username), hash, a.displayName || String(a.username)]
+        [String(username), hash, String(username)]
       );
-      if (rowCount) created.push(a.username);
+      if (rowCount) created.push(username);
+      else skipped.push(username);
     }
-    res.status(201).json({ ok: true, created });
+    res.status(201).json({ ok: true, received: pairs.length, created, skipped });
   })
 );
 
