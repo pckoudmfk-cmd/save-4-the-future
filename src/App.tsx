@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, ChangeEvent } from "react";
 import { Icon28ArrowLeftOutline, Icon28ChevronRightOutline } from "@vkontakte/icons";
 import { Button, Input, Textarea, Card, Div, Title, Text, Separator } from "@vkontakte/vkui";
@@ -280,27 +280,146 @@ function usePublicWorks(): Submission[] {
   return works;
 }
 
+// Manual-advance slideshow ("gallery mode") for the exhibition: one poster at
+// a time, full size, with its idea/author underneath and prev/next controls
+// (buttons, swipe, or arrow keys) instead of the grid of small cards.
+function GallerySlideshow({ works, onClose }: { works: Submission[]; onClose: () => void }) {
+  const [i, setI] = useState(0);
+  const w = works[i];
+  const [reacted, setReacted] = useState(false);
+  const [reacting, setReacting] = useState(false);
+  const [audience, setAudience] = useState(0);
+  const touchX = useRef<number | null>(null);
+
+  const go = (delta: number) => setI((cur) => (cur + delta + works.length) % works.length);
+
+  useEffect(() => {
+    if (!w) return;
+    setReacted(!!localStorage.getItem("reacted:" + w.id));
+    setAudience(w.audience);
+  }, [w?.id]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") go(1);
+      else if (e.key === "ArrowLeft") go(-1);
+      else if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [works.length]);
+
+  const react = async () => {
+    if (!w || reacted || reacting) return;
+    setReacting(true);
+    try {
+      const next = hasApi() ? (await api.reaction(w.id)).audience : db.react(w.id);
+      setAudience(next);
+      setReacted(true);
+      localStorage.setItem("reacted:" + w.id, "1");
+    } catch {
+      /* the visitor can just try again */
+    } finally {
+      setReacting(false);
+    }
+  };
+
+  if (!w) return null;
+  return (
+    <div className="gallerySlideshow">
+      <div className="slideTop">
+        <span className="slideCounter">
+          {i + 1} / {works.length}
+        </span>
+        <button className="slideClose" onClick={onClose}>
+          ✕ К сетке
+        </button>
+      </div>
+      <div
+        className="slideStage"
+        onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
+        onTouchEnd={(e) => {
+          if (touchX.current === null) return;
+          const dx = e.changedTouches[0].clientX - touchX.current;
+          if (dx > 50) go(-1);
+          else if (dx < -50) go(1);
+          touchX.current = null;
+        }}
+      >
+        <button className="slideNav slideNavPrev" onClick={() => go(-1)} aria-label="Предыдущий постер" disabled={works.length < 2}>
+          ‹
+        </button>
+        <div className="slideImage">
+          {w.imageUrl ? (
+            <img src={w.imageUrl} alt={w.title} />
+          ) : (
+            <div className="posterVisual big">
+              <strong>{w.title}</strong>
+              <small>{w.idea}</small>
+            </div>
+          )}
+        </div>
+        <button className="slideNav slideNavNext" onClick={() => go(1)} aria-label="Следующий постер" disabled={works.length < 2}>
+          ›
+        </button>
+      </div>
+      <div className="slideInfo">
+        <span className="slideNo">
+          #{w.posterNo}
+          {w.interactive ? " · INTERACTIVE" : " · DIGITAL POSTER"}
+        </span>
+        <h2>{w.title}</h2>
+        {w.author && (
+          <div className="slideAuthor">
+            {w.author}
+            {w.group ? " · " + w.group : ""}
+          </div>
+        )}
+        <p>{w.idea}</p>
+        <button className={reacted ? "reactionBtn reactionBtn-done" : "reactionBtn"} onClick={react} disabled={reacted || reacting}>
+          <span>{reacted ? "❤" : "♡"}</span>
+          «Этот постер заставил меня задуматься»
+          <b>{audience}</b>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Exhibition({ setView }: { setView: (v: View) => void }) {
   const works = usePublicWorks();
+  const [mode, setMode] = useState<"grid" | "slides">("grid");
   return (
     <Page title="Цифровая выставка" lead="Работы участников. Авторы скрыты на этапе оценки.">
       <div className="filters">
         <Button mode="secondary">Все</Button>
         <Button mode="secondary">AI poster</Button>
         <Button mode="secondary">Interactive</Button>
+        <Button
+          mode={mode === "slides" ? "primary" : "secondary"}
+          onClick={() => setMode(mode === "slides" ? "grid" : "slides")}
+          disabled={works.length === 0}
+        >
+          {mode === "slides" ? "Сетка" : "Режим галереи"}
+        </Button>
       </div>
-      <div className="posterGrid">
-        {works.map((w) => (
-          <PosterCard
-            key={w.id}
-            w={w}
-            onClick={() => {
-              sessionStorage.setItem("poster", w.id);
-              setView("poster");
-            }}
-          />
-        ))}
-      </div>
+      {mode === "slides" ? (
+        <GallerySlideshow works={works} onClose={() => setMode("grid")} />
+      ) : (
+        <div className="posterGrid">
+          {works.map((w) => (
+            <PosterCard
+              key={w.id}
+              w={w}
+              onClick={() => {
+                sessionStorage.setItem("poster", w.id);
+                setView("poster");
+              }}
+            />
+          ))}
+        </div>
+      )}
     </Page>
   );
 }
