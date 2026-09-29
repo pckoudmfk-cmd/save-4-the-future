@@ -49,6 +49,19 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get("/api/health", async (req, res) => {
+  const info = { ok: true, service: "save-the-future-api", sessionSecretSet: Boolean(SESSION_SECRET) };
+  try {
+    await ensureSchema();
+    info.db = "ok";
+  } catch (e) {
+    info.ok = false;
+    info.db = "error";
+    info.dbError = String(e && e.message ? e.message : e);
+  }
+  res.status(200).json(info);
+});
+
 app.use(async (req, res, next) => {
   try {
     if (!SESSION_SECRET) throw new Error("SESSION_SECRET is not set in the Vercel project's environment variables");
@@ -59,8 +72,6 @@ app.use(async (req, res, next) => {
     res.status(500).json({ error: "server_not_configured" });
   }
 });
-
-app.get("/api/health", (req, res) => res.json({ ok: true, service: "save-the-future-api" }));
 
 app.use((req, res, next) => {
   if (req.method === "POST" && req.path.startsWith("/api/upload/")) return next();
