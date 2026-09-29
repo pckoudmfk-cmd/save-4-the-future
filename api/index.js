@@ -89,20 +89,35 @@ function asyncRoute(fn) {
 }
 
 // ---- one-time bootstrap ----
+async function runSetup(key, b, res) {
+  if (!SETUP_KEY || key !== SETUP_KEY) return res.status(401).json({ error: "unauthorized" });
+  const { rows: countRows } = await pool.query("SELECT COUNT(*)::int AS c FROM users");
+  if (countRows[0].c > 0) return res.status(409).json({ error: "already_initialized" });
+  if (!b.username || !b.password) return res.status(400).json({ error: "username and password are required" });
+  const hash = hashPassword(String(b.password));
+  await pool.query(
+    "INSERT INTO users(username,password_hash,role,display_name) VALUES($1,$2,'organizer',$3)",
+    [String(b.username), hash, b.displayName || String(b.username)]
+  );
+  res.status(201).json({ ok: true });
+}
+
 app.post(
   "/api/setup",
   asyncRoute(async (req, res) => {
-    if (!SETUP_KEY || req.headers["x-setup-key"] !== SETUP_KEY) return res.status(401).json({ error: "unauthorized" });
-    const { rows: countRows } = await pool.query("SELECT COUNT(*)::int AS c FROM users");
-    if (countRows[0].c > 0) return res.status(409).json({ error: "already_initialized" });
-    const b = req.body || {};
-    if (!b.username || !b.password) return res.status(400).json({ error: "username and password are required" });
-    const hash = hashPassword(String(b.password));
-    await pool.query(
-      "INSERT INTO users(username,password_hash,role,display_name) VALUES($1,$2,'organizer',$3)",
-      [String(b.username), hash, b.displayName || String(b.username)]
-    );
-    res.status(201).json({ ok: true });
+    await runSetup(req.headers["x-setup-key"], req.body || {}, res);
+  })
+);
+
+// TEMPORARY: GET variant of the bootstrap for one-time use from environments
+// that cannot issue a POST with a custom header. Guarded by the same
+// SETUP_KEY and the same already-initialized check, so it is harmless to
+// leave briefly, but it is removed again right after first use.
+app.get(
+  "/api/setup",
+  asyncRoute(async (req, res) => {
+    const q = req.query || {};
+    await runSetup(q.key, { username: q.username, password: q.password, displayName: q.displayName }, res);
   })
 );
 
