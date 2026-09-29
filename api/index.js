@@ -109,30 +109,6 @@ app.post(
   })
 );
 
-// TEMPORARY: GET variant of the bootstrap for one-time use from environments
-// that cannot issue a POST with a custom header. Guarded by the same
-// SETUP_KEY and the same already-initialized check, so it is harmless to
-// leave briefly, but it is removed again right after first use.
-app.get(
-  "/api/setup",
-  asyncRoute(async (req, res) => {
-    const q = req.query || {};
-    await runSetup(q.key, { username: q.username, password: q.password, displayName: q.displayName }, res);
-  })
-);
-
-// TEMPORARY: lets the bootstrap key holder see which usernames already
-// exist (no password data), to diagnose an "already_initialized" bootstrap
-// response. Removed again right after first use.
-app.get(
-  "/api/setup/whoami",
-  asyncRoute(async (req, res) => {
-    if (!SETUP_KEY || req.query.key !== SETUP_KEY) return res.status(401).json({ error: "unauthorized" });
-    const { rows } = await pool.query("SELECT id,username,role,display_name,created_at FROM users ORDER BY id");
-    res.json({ users: rows });
-  })
-);
-
 // ---- auth ----
 app.post(
   "/api/login",
