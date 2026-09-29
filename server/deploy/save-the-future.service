@@ -1,0 +1,30 @@
+# systemd unit that keeps the API running and restarts it if it crashes or
+# the server reboots.
+#
+# Install:
+#   sudo cp deploy/save-the-future.service /etc/systemd/system/save-the-future.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now save-the-future
+#
+# Adjust WorkingDirectory below to wherever you actually placed the server/
+# folder on the machine (this assumes /opt/save-the-future/server).
+
+[Unit]
+Description=SAVE 4 THE FUTURE poster contest API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/save-the-future/server
+EnvironmentFile=/opt/save-the-future/server/.env
+ExecStart=/usr/bin/node src/index.js
+Restart=on-failure
+RestartSec=5
+User=www-data
+Group=www-data
+
+# Keep the SQLite file and uploads writable by the service user.
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

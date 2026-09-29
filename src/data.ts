@@ -1,0 +1,6 @@
+import type { Submission } from "./types";
+export const demoSubmissions: Submission[] = [
+ {id:"demo-1",posterNo:101,title:"SAVE BEFORE YOU SPEND",idea:"Small decisions today can protect tomorrow.",problem:"Impulse spending",author:"Demo Student",group:"25 ОФ4",contact:"",tools:"ChatGPT; image generator",aiHow:"Idea refinement, English copy, visual generation",contribution:"Concept, editing, final composition",interactive:false,imageUrl:"",status:"published",createdAt:"2026-09-20",audience:24},
+ {id:"demo-2",posterNo:102,title:"YOUR FUTURE HAS A PRICE",idea:"Every purchase is also a choice about the future.",problem:"Unplanned consumption",author:"Demo Student",group:"25 ОФ4",contact:"",tools:"AI image generator",aiHow:"Visual concept and image generation",contribution:"Message, layout and editing",interactive:true,status:"published",createdAt:"2026-09-21",audience:31},
+ {id:"demo-3",posterNo:103,title:"MAKE MONEY STAY",idea:"Saving is not giving up. It is giving your money a purpose.",problem:"Lack of saving habit",author:"Demo Student",group:"25 ОФ4",contact:"",tools:"ChatGPT; design AI",aiHow:"Copy alternatives and composition ideas",contribution:"Final text and visual editing",interactive:false,status:"published",createdAt:"2026-09-22",audience:18}
+];
