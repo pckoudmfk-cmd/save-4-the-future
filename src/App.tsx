@@ -1038,8 +1038,11 @@ function About() {
 
 function Poster({ setView }: { setView: (v: View) => void }) {
   const [w, setW] = useState<Submission | null | undefined>(undefined);
+  const [reacted, setReacted] = useState(false);
+  const [reacting, setReacting] = useState(false);
   useEffect(() => {
     const id = sessionStorage.getItem("poster") || "";
+    setReacted(!!localStorage.getItem("reacted:" + id));
     (async () => {
       if (hasApi()) {
         try {
@@ -1052,6 +1055,20 @@ function Poster({ setView }: { setView: (v: View) => void }) {
       setW(db.submissions().find((x) => x.id === id) || null);
     })();
   }, []);
+  const react = async () => {
+    if (!w || reacted || reacting) return;
+    setReacting(true);
+    try {
+      const audience = hasApi() ? (await api.reaction(w.id)).audience : db.react(w.id);
+      setW({ ...w, audience });
+      setReacted(true);
+      localStorage.setItem("reacted:" + w.id, "1");
+    } catch {
+      /* if it fails, the person can just try again */
+    } finally {
+      setReacting(false);
+    }
+  };
   if (w === undefined) return <Page title="Загрузка…" />;
   if (!w)
     return (
@@ -1072,6 +1089,11 @@ function Poster({ setView }: { setView: (v: View) => void }) {
             </div>
           )}
         </div>
+        <button className={reacted ? "reactionBtn reactionBtn-done" : "reactionBtn"} onClick={react} disabled={reacted || reacting}>
+          <span>{reacted ? "❤" : "♡"}</span>
+          «Этот постер заставил меня задуматься»
+          <b>{w.audience}</b>
+        </button>
         <Title level="3">AI Creative Passport</Title>
         <Text>
           <b>Инструменты:</b> {w.tools || "—"}

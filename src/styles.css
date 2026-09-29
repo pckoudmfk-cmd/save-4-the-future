@@ -201,6 +201,13 @@ input,textarea,select{font-size:16px}
 .revealHead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .revealHead b{color:#fff;font-size:16px;display:block;margin-bottom:4px}
 .posterAuthor{color:#8fb7bc!important;font-size:13px!important;margin-top:2px}
+.reactionBtn{width:100%;display:flex;align-items:center;gap:12px;padding:16px 20px;margin:18px 0;border:1px solid rgba(111,210,198,.2);border-radius:16px;background:rgba(255,255,255,.04);color:#e6f3f3;font-size:15px;cursor:pointer;transition:.15s}
+.reactionBtn span{font-size:20px;color:#6fd2c6;flex:0 0 auto}
+.reactionBtn b{margin-left:auto;font-size:18px;color:#fff;flex:0 0 auto}
+.reactionBtn:hover:not(:disabled){background:rgba(255,255,255,.07);border-color:rgba(111,210,198,.35)}
+.reactionBtn:disabled{cursor:default}
+.reactionBtn-done{background:linear-gradient(145deg,rgba(24,180,174,.18),rgba(13,110,143,.16));border-color:rgba(70,220,210,.4)}
+.reactionBtn-done span{color:#ff8fa3}
 .resultAuthor{display:block;color:#8fb7bc;font-size:13px;font-weight:400;margin-top:3px}
 .error{padding:14px;border-radius:12px;background:#3f1414;color:#f2a8a0}
 .fileField{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#a9c0c2}

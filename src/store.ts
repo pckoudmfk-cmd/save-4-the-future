@@ -8,5 +8,6 @@ export const db={get:read,submissions:()=>read().submissions,stage:()=>read().st
 add:(s:Submission)=>{const d=read();d.submissions=[s,...d.submissions];write(d)},
 status:(id:string,status:Submission["status"])=>{const d=read();const s=d.submissions.find(x=>x.id===id);if(s)s.status=status;write(d)},
 score:(id:string,score:Score)=>{const d=read();d.scores[id]=score;write(d)},scores:()=>read().scores,
+react:(id:string)=>{const d=read();const s=d.submissions.find(x=>x.id===id);if(s)s.audience=(s.audience||0)+1;write(d);return s?.audience||0},
 reset:()=>localStorage.removeItem(K)};
 export function total(s?:Score){return s?Object.values(s).reduce((a,b)=>a+b,0):0}

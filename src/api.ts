@@ -78,7 +78,7 @@ export const api = {
 
   setStatus: (id: string, status: Submission["status"]) => request<{ ok: true }>("/api/submissions/" + id + "/status", { method: "PATCH", body: JSON.stringify({ status }) }),
   score: (id: string, score: Score) => request<{ ok: true; total: number }>("/api/submissions/" + id + "/score", { method: "PUT", body: JSON.stringify(score) }),
-  reaction: (id: string) => request<{ ok: true }>("/api/submissions/" + id + "/reaction", { method: "POST" }),
+  reaction: (id: string) => request<{ ok: true; audience: number }>("/api/submissions/" + id + "/reaction", { method: "POST" }),
   results: () => request<{ results: ResultRow[]; namesRevealed: boolean }>("/api/results"),
 
   listAccounts: () => request<{ users: Account[] }>("/api/admin/users").then((r) => r.users),

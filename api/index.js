@@ -296,8 +296,12 @@ app.put(
 app.post(
   "/api/submissions/:id/reaction",
   asyncRoute(async (req, res) => {
-    await pool.query("UPDATE submissions SET audience_count=audience_count+1 WHERE id=$1", [req.params.id]);
-    res.json({ ok: true });
+    const { rows } = await pool.query(
+      "UPDATE submissions SET audience_count=audience_count+1 WHERE id=$1 RETURNING audience_count",
+      [req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: "not_found" });
+    res.json({ ok: true, audience: rows[0].audience_count });
   })
 );
 
