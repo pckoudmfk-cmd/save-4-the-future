@@ -109,6 +109,34 @@ app.post(
   })
 );
 
+// TEMPORARY: batch-create jury accounts from a GET request, for use from
+// environments that cannot issue a POST with a session cookie. Guarded by
+// SETUP_KEY, accepts existing users (INSERT ... ON CONFLICT DO NOTHING so
+// it's safe to retry), and is removed again right after first use.
+app.get(
+  "/api/setup/bulk-jury",
+  asyncRoute(async (req, res) => {
+    if (!SETUP_KEY || req.query.key !== SETUP_KEY) return res.status(401).json({ error: "unauthorized" });
+    let accounts;
+    try {
+      accounts = JSON.parse(req.query.accounts || "[]");
+    } catch {
+      return res.status(400).json({ error: "accounts must be a JSON array" });
+    }
+    const created = [];
+    for (const a of accounts) {
+      if (!a.username || !a.password) continue;
+      const hash = hashPassword(String(a.password));
+      const { rowCount } = await pool.query(
+        "INSERT INTO users(username,password_hash,role,display_name) VALUES($1,$2,'jury',$3) ON CONFLICT (username) DO NOTHING",
+        [String(a.username), hash, a.displayName || String(a.username)]
+      );
+      if (rowCount) created.push(a.username);
+    }
+    res.status(201).json({ ok: true, created });
+  })
+);
+
 // ---- auth ----
 app.post(
   "/api/login",
