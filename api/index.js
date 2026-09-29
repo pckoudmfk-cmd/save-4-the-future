@@ -121,6 +121,18 @@ app.get(
   })
 );
 
+// TEMPORARY: lets the bootstrap key holder see which usernames already
+// exist (no password data), to diagnose an "already_initialized" bootstrap
+// response. Removed again right after first use.
+app.get(
+  "/api/setup/whoami",
+  asyncRoute(async (req, res) => {
+    if (!SETUP_KEY || req.query.key !== SETUP_KEY) return res.status(401).json({ error: "unauthorized" });
+    const { rows } = await pool.query("SELECT id,username,role,display_name,created_at FROM users ORDER BY id");
+    res.json({ users: rows });
+  })
+);
+
 // ---- auth ----
 app.post(
   "/api/login",
