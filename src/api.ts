@@ -63,6 +63,11 @@ export const api = {
 
   submissions: () => request<{ submissions: any[] }>("/api/submissions").then((r) => r.submissions.map(normalizeSubmission)),
   submission: (id: string) => request<any>("/api/submissions/" + id).then(normalizeSubmission),
+  // Admin moderation screen only: every status, every column (incl. author).
+  // Any other call — including the organizer just browsing the public
+  // gallery/poster pages while logged in — must stay on the plain variants
+  // above, so names stay hidden there until she explicitly reveals them.
+  adminSubmissions: () => request<{ submissions: any[] }>("/api/submissions?view=admin").then((r) => r.submissions.map(normalizeSubmission)),
   createSubmission: (data: Record<string, unknown>) => request<{ id: string; posterNo: number; status: string }>("/api/submissions", { method: "POST", body: JSON.stringify(data) }),
 
   uploadImage: async (id: string, file: File) => {

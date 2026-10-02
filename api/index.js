@@ -207,13 +207,21 @@ app.post(
 );
 
 // ---- submissions: list ----
+// The organizer gets full data (every status, all columns incl. author) only
+// when explicitly asking for the admin view (?view=admin) — the moderation
+// screen does this. Any other request, even from an organizer's own browser
+// tab (e.g. she's just browsing the public gallery while logged in), gets
+// exactly what an anonymous visitor sees: published/winner posters only,
+// names shown only once the organizer has revealed them site-wide. This is
+// what keeps "only the organizer can decide when names are public" true even
+// for the organizer's own page views, not just for everyone else.
 app.get(
   "/api/submissions",
   asyncRoute(async (req, res) => {
     const session = verifySession(req, SESSION_SECRET);
-    const isOrganizer = !!session && session.role === "organizer";
-    const cols = (isOrganizer ? ALL_COLUMNS : (await namesRevealed()) ? PUBLIC_COLUMNS_WITH_NAMES : PUBLIC_COLUMNS).join(",");
-    const sql = isOrganizer
+    const isAdminView = req.query.view === "admin" && !!session && session.role === "organizer";
+    const cols = (isAdminView ? ALL_COLUMNS : (await namesRevealed()) ? PUBLIC_COLUMNS_WITH_NAMES : PUBLIC_COLUMNS).join(",");
+    const sql = isAdminView
       ? `SELECT ${cols} FROM submissions ORDER BY created_at DESC`
       : `SELECT ${cols} FROM submissions WHERE status IN ('published','winner') ORDER BY created_at DESC`;
     const { rows } = await pool.query(sql);
@@ -226,9 +234,9 @@ app.get(
   "/api/submissions/:id",
   asyncRoute(async (req, res) => {
     const session = verifySession(req, SESSION_SECRET);
-    const isOrganizer = !!session && session.role === "organizer";
-    const cols = (isOrganizer ? ALL_COLUMNS : (await namesRevealed()) ? PUBLIC_COLUMNS_WITH_NAMES : PUBLIC_COLUMNS).join(",");
-    const sql = isOrganizer
+    const isAdminView = req.query.view === "admin" && !!session && session.role === "organizer";
+    const cols = (isAdminView ? ALL_COLUMNS : (await namesRevealed()) ? PUBLIC_COLUMNS_WITH_NAMES : PUBLIC_COLUMNS).join(",");
+    const sql = isAdminView
       ? `SELECT ${cols} FROM submissions WHERE id=$1`
       : `SELECT ${cols} FROM submissions WHERE id=$1 AND status IN ('published','winner')`;
     const { rows } = await pool.query(sql, [req.params.id]);

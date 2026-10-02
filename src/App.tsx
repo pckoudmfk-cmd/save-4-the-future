@@ -935,7 +935,7 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
 
   const loadWorks = async () => {
     try {
-      setWorks(await api.submissions());
+      setWorks(await api.adminSubmissions());
     } catch {
       /* ignore */
     }
