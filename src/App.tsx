@@ -152,10 +152,6 @@ function ApprovedCover({ setView }: { setView: (v: View) => void }) {
             </h1>
             <div className="coverSub">{labels.headline}</div>
             <p>{labels.tagline}</p>
-            <div className="deadlineBanner">
-              <span>⏳</span>
-              Заявки принимаются до 20 октября
-            </div>
             <button className="coverPill" onClick={() => setView("exhibition")}>
               <span>▣</span>
               {labels.pill}
@@ -192,6 +188,10 @@ function ApprovedCover({ setView }: { setView: (v: View) => void }) {
               <span className="coverCardArrow">›</span>
             </button>
           ))}
+          <div className="coverCard deadlineCard">
+            <span className="coverCardIcon">⏳</span>
+            <b>Заявки принимаются до 20 октября</b>
+          </div>
         </section>
         <footer className="coverFooter">
           <span>{labels.foot}</span>

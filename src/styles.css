@@ -32,9 +32,6 @@ input,textarea,select{font-size:16px}
 .coverCopy h1 span{display:inline-block}.coverCopy h1 strong{font-weight:950;white-space:nowrap}.coverCopy h1 em{font-style:normal;background:linear-gradient(90deg,#19b77d,#079fd4);-webkit-background-clip:text;background-clip:text;color:transparent}
 .coverSub{font-size:clamp(17px,1.55vw,24px);letter-spacing:4px;font-weight:900;color:#123f4d;margin-top:29px}
 .coverCopy p{font-size:18px;color:#163f4d;font-weight:700;margin:18px 0 20px;max-width:650px}
-.deadlineBanner{align-self:flex-start;display:flex;align-items:center;gap:10px;margin:18px 0;padding:10px 18px;border-radius:999px;background:#fff1e0;border:1.5px solid #f0a33d;color:#8a4b06;font-weight:800;font-size:15px;letter-spacing:.2px}
-.deadlineBanner span{font-size:18px}
-@media(max-width:760px){.deadlineBanner{font-size:13px;padding:9px 14px}}
 .coverPill{align-self:flex-start;min-width:470px;border:0;padding:15px 19px;border-radius:999px;background:linear-gradient(100deg,#16bca2,#129bd9);color:#fff;font-size:17px;font-weight:900;letter-spacing:.6px;box-shadow:0 11px 0 rgba(6,117,129,.16),0 18px 30px rgba(12,157,173,.22),inset 0 2px rgba(255,255,255,.35);display:flex;align-items:center;justify-content:space-between;gap:14px;cursor:pointer;transition:.18s}
 .coverPill span{font-size:20px}.coverPill b{font-size:30px;line-height:15px}.coverPill:hover{transform:translateY(-3px);box-shadow:0 14px 0 rgba(6,117,129,.16),0 22px 35px rgba(12,157,173,.25),inset 0 2px rgba(255,255,255,.35)}
 .coverThemes{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:42px;max-width:680px;border-top:1px solid #cadbd8;padding-top:20px}
@@ -50,6 +47,9 @@ input,textarea,select{font-size:16px}
 .coverCard:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 80% 10%,rgba(255,255,255,.2),transparent 34%),linear-gradient(135deg,transparent 35%,rgba(52,221,190,.18));pointer-events:none}
 .coverCard:hover{transform:translateY(-5px);box-shadow:0 14px 0 rgba(3,62,79,.15),0 24px 35px rgba(5,63,78,.24),inset 0 1px rgba(255,255,255,.32)}
 .coverCard.card-02,.coverCard.card-04{background:linear-gradient(145deg,#10a58c,#087ea5 65%,#07516b)}
+.deadlineCard{display:flex;flex-direction:column;justify-content:center;gap:10px;cursor:default;background:linear-gradient(145deg,#1fb869 0%,#149a56 55%,#0c6a39 100%)!important}
+.deadlineCard .coverCardIcon{position:static;font-size:26px;color:#fff}
+.deadlineCard b{color:#fff;font-size:17px;line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,.25)}
 .coverCardNo{display:block;font-size:11px;color:#d8ffff;letter-spacing:1.5px;font-weight:950;margin-bottom:24px;position:relative}
 .coverCardIcon{position:absolute;right:19px;top:17px;font-size:30px;color:#eaffff}
 .coverCard b{display:block;font-size:18px;letter-spacing:.5px;position:relative}.coverCard small{display:block;margin-top:8px;color:#d5f2f2;font-size:12px;font-weight:650;max-width:180px;position:relative}.coverCardArrow{position:absolute;right:18px;bottom:14px;width:34px;height:34px;border:1px solid rgba(255,255,255,.6);border-radius:50%;display:grid;place-items:center;font-size:25px;line-height:1;background:linear-gradient(145deg,rgba(255,255,255,.18),rgba(0,0,0,.1));box-shadow:inset 0 1px rgba(255,255,255,.3)}
