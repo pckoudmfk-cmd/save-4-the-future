@@ -961,11 +961,17 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
   }, []);
 
   const setStatus = async (id: string, status: Submission["status"]) => {
+    setMessage("");
     try {
       await api.setStatus(id, status);
       await loadWorks();
-    } catch {
-      setMessage("Не удалось изменить статус.");
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : "";
+      if (reason === "unauthorized" || reason === "forbidden") {
+        setMessage("Сессия администратора истекла — выйдите и войдите заново.");
+      } else {
+        setMessage("Не удалось изменить статус. Проверьте соединение и попробуйте ещё раз.");
+      }
     }
   };
   const toggleNamesRevealed = async () => {
@@ -1036,12 +1042,16 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
           Аккаунты жюри
         </Button>
       </div>
+      {message && <Text className={message.startsWith("Аккаунт создан") ? "success" : "error"}>{message}</Text>}
 
       {tab === "moderation" ? (
         <div className="resultList">
           {works.map((w) => (
             <Card key={w.id}>
               <div className="adminRow">
+                <div className="adminThumb">
+                  {w.imageUrl ? <img src={w.imageUrl} alt={w.title} /> : <span>#{w.posterNo}</span>}
+                </div>
                 <b>#{w.posterNo}</b>
                 <span>{w.title}</span>
                 <small>
@@ -1079,7 +1089,6 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
           <Button mode="primary" onClick={createAccount}>
             Создать аккаунт
           </Button>
-          {message && <Text className={message.startsWith("Аккаунт создан") ? "success" : "error"}>{message}</Text>}
           <Separator />
           <Title level="3">Существующие аккаунты</Title>
           {accounts.map((a) => (

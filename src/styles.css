@@ -240,10 +240,14 @@ input,textarea,select{font-size:16px}
 .fileField{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#a9c0c2}
 .fileField input{color:#eef7f7}
 .roleSelect{width:100%;padding:12px;border-radius:12px;background:#0a222c;color:#eef7f7;border:1px solid rgba(255,255,255,.12)}
-.adminRow{display:grid;grid-template-columns:60px 1.5fr 1.5fr 140px auto;align-items:center;gap:12px;padding:16px}
+.adminRow{display:grid;grid-template-columns:56px 60px 1.5fr 1.5fr 140px auto;align-items:center;gap:12px;padding:16px}
+.adminThumb{width:56px;height:56px;border-radius:10px;overflow:hidden;background:#0a222c;display:grid;place-items:center;flex-shrink:0}
+.adminThumb img{width:100%;height:100%;object-fit:cover;display:block}
+.adminThumb span{color:#6fd2c6;font-size:11px;font-weight:700}
 .adminActions{display:flex;gap:8px;flex-wrap:wrap}
 @media(max-width:760px){
   .adminRow{grid-template-columns:1fr;gap:8px;padding:16px 14px}
+  .adminThumb{width:100%;height:160px;border-radius:14px}
   .adminActions{width:100%}
   .adminActions .vkuiButton{flex:1 1 calc(50% - 8px)}
   .filters{flex-wrap:wrap}
