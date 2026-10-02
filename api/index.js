@@ -224,6 +224,31 @@ app.post(
   })
 );
 
+// ---- admin: per-juror score breakdown (organizer only) ----
+// Named scores exist nowhere else in the app on purpose — the public
+// /api/results route is a juror-count and an average, by design, so
+// participants and other jurors never see who scored what. This route is
+// the one place that breakdown is exposed, and only to a verified
+// organizer session; the jury's own workspace still only shows a juror
+// their own in-progress scoring, never anyone else's.
+app.get(
+  "/api/admin/scores",
+  asyncRoute(async (req, res) => {
+    requireRole(req, SESSION_SECRET, ["organizer"]);
+    const { rows } = await pool.query(
+      `SELECT s.id as "submissionId", s.poster_no as "posterNo", s.title,
+              sc.jury_user_id as "juryUserId", u.display_name as "displayName", u.username,
+              sc.idea, sc.english, sc.originality, sc.design, sc.digital,
+              (sc.idea + sc.english + sc.originality + sc.design + sc.digital) as total
+       FROM submissions s
+       JOIN scores sc ON sc.submission_id = s.id
+       LEFT JOIN users u ON u.id::text = sc.jury_user_id
+       ORDER BY s.poster_no ASC, COALESCE(u.display_name, u.username, sc.jury_user_id) ASC`
+    );
+    res.json({ scores: rows });
+  })
+);
+
 // ---- submissions: list ----
 // The organizer gets full data (every status, all columns incl. author) only
 // when explicitly asking for the admin view (?view=admin) — the moderation

@@ -977,13 +977,15 @@ const statusLabel: Record<Submission["status"], string> = {
 };
 
 function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) {
-  const [tab, setTab] = useState<"moderation" | "accounts">("moderation");
+  const [tab, setTab] = useState<"moderation" | "accounts" | "scores">("moderation");
   const [works, setWorks] = useState<Submission[]>([]);
   const [accounts, setAccounts] = useState<{ id: number; username: string; role: Role; display_name: string | null }[]>([]);
   const [newAccount, setNewAccount] = useState({ username: "", password: "", displayName: "", role: "jury" as Role });
   const [message, setMessage] = useState("");
   const [namesRevealed, setNamesRevealedState] = useState<boolean | null>(null);
   const [revealBusy, setRevealBusy] = useState(false);
+  const [scoreRows, setScoreRows] = useState<Awaited<ReturnType<typeof api.adminScores>>["scores"] | null>(null);
+  const [scoresError, setScoresError] = useState("");
 
   const loadWorks = async () => {
     try {
@@ -1006,11 +1008,27 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
       /* ignore */
     }
   };
+  const loadScores = async () => {
+    setScoresError("");
+    try {
+      setScoreRows((await api.adminScores()).scores);
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : "";
+      setScoresError(
+        reason === "unauthorized" || reason === "forbidden"
+          ? "Сессия администратора истекла — выйдите и войдите заново."
+          : "Не удалось загрузить оценки. Проверьте соединение и попробуйте ещё раз."
+      );
+    }
+  };
   useEffect(() => {
     loadWorks();
     loadAccounts();
     loadSettings();
   }, []);
+  useEffect(() => {
+    if (tab === "scores" && scoreRows === null) loadScores();
+  }, [tab]);
 
   const setStatus = async (id: string, status: Submission["status"]) => {
     setMessage("");
@@ -1110,10 +1128,50 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
         <Button mode={tab === "accounts" ? "primary" : "secondary"} onClick={() => setTab("accounts")}>
           Аккаунты жюри
         </Button>
+        <Button mode={tab === "scores" ? "primary" : "secondary"} onClick={() => setTab("scores")}>
+          Оценки жюри
+        </Button>
       </div>
       {message && <Text className={message.startsWith("Аккаунт создан") ? "success" : "error"}>{message}</Text>}
 
-      {tab === "moderation" ? (
+      {tab === "scores" ? (
+        <div className="resultList">
+          <Text className="muted">
+            Оценки по именам видны только вам и, в своей собственной строке, каждому члену жюри — участникам и другим членам жюри эти данные не
+            показываются.
+          </Text>
+          {scoresError && <Text className="error">{scoresError}</Text>}
+          {scoreRows &&
+            (() => {
+              const byPoster = new Map<string, { posterNo: number; title: string; rows: typeof scoreRows }>();
+              for (const r of scoreRows) {
+                const entry = byPoster.get(r.submissionId) || { posterNo: r.posterNo, title: r.title, rows: [] as typeof scoreRows };
+                entry.rows.push(r);
+                byPoster.set(r.submissionId, entry);
+              }
+              const posters = Array.from(byPoster.values()).sort((a, b) => a.posterNo - b.posterNo);
+              if (posters.length === 0) return <Text className="muted">Оценок пока нет.</Text>;
+              return posters.map((p) => (
+                <Card key={p.posterNo}>
+                  <Div>
+                    <Text weight="2">
+                      #{posterLabel(p.posterNo)} · {p.title}
+                    </Text>
+                    {p.rows.map((r) => (
+                      <div className="adminRow" key={r.juryUserId}>
+                        <b>{r.displayName || r.username || r.juryUserId}</b>
+                        <small>
+                          Идея {r.idea} · Английский {r.english} · Оригинальность {r.originality} · Дизайн {r.design} · AI/digital {r.digital}
+                        </small>
+                        <strong>{r.total} / 100</strong>
+                      </div>
+                    ))}
+                  </Div>
+                </Card>
+              ));
+            })()}
+        </div>
+      ) : tab === "moderation" ? (
         <div className="resultList">
           {works.map((w) => (
             <Card key={w.id}>

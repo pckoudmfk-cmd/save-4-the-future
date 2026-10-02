@@ -93,6 +93,26 @@ export const api = {
   reaction: (id: string) => request<{ ok: true; audience: number; alreadyReacted: boolean }>("/api/submissions/" + id + "/reaction", { method: "POST" }),
   results: () => request<{ results: ResultRow[]; namesRevealed: boolean }>("/api/results"),
 
+  // Organizer-only per-juror score breakdown. Named scores exist nowhere
+  // else in the app on purpose — see the route itself for why.
+  adminScores: () =>
+    request<{
+      scores: Array<{
+        submissionId: string;
+        posterNo: number;
+        title: string;
+        juryUserId: string;
+        displayName: string | null;
+        username: string | null;
+        idea: number;
+        english: number;
+        originality: number;
+        design: number;
+        digital: number;
+        total: number;
+      }>;
+    }>("/api/admin/scores"),
+
   listAccounts: () => request<{ users: Account[] }>("/api/admin/users").then((r) => r.users),
   createAccount: (username: string, password: string, role: Role, displayName?: string) =>
     request<{ ok: true }>("/api/admin/users", { method: "POST", body: JSON.stringify({ username, password, role, displayName }) }),
