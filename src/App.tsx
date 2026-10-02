@@ -284,6 +284,15 @@ function PosterCard({ w, onClick }: { w: Submission; onClick: () => void }) {
           </Text>
         )}
         <button
+          className="posterMoreBtn"
+          onClick={(e: MouseEvent) => {
+            e.stopPropagation(); // the card's own onClick does the same thing — avoid firing it twice
+            onClick();
+          }}
+        >
+          Подробнее <span>→</span>
+        </button>
+        <button
           className={reacted ? "reactionBtn reactionBtn-compact reactionBtn-done" : "reactionBtn reactionBtn-compact"}
           onClick={react}
           disabled={reacted || reacting}

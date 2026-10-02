@@ -212,6 +212,10 @@ input,textarea,select{font-size:16px}
 .reactionBtn-compact span{font-size:15px}
 .reactionBtn-compact b{font-size:14px}
 .resultAuthor{display:block;color:#8fb7bc;font-size:13px;font-weight:400;margin-top:3px}
+.posterMoreBtn{display:flex;align-items:center;gap:6px;margin-top:12px;padding:0;border:0;background:transparent;color:#6fd2c6;font-size:13.5px;font-weight:700;letter-spacing:.2px;cursor:pointer}
+.posterMoreBtn span{transition:transform .15s}
+.posterCard:hover .posterMoreBtn span{transform:translateX(3px)}
+.posterMoreBtn:hover{color:#8de4da}
 /* GALLERY SLIDESHOW MODE */
 .gallerySlideshow{border:1px solid rgba(107,224,214,.18);background:linear-gradient(145deg,#0d303b,#061d27);border-radius:28px;box-shadow:0 20px 55px rgba(0,0,0,.28);padding:22px;max-width:980px;margin:0 auto}
 .slideTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
