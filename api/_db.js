@@ -80,6 +80,19 @@ export async function ensureSchema() {
       value TEXT NOT NULL
     );
 
+    -- One row per (poster, visitor) that has clicked "этот постер заставил
+    -- меня задуматься" — the server-side source of truth for "already
+    -- reacted", keyed by the long-lived stf_visitor cookie (see
+    -- ensureVisitorId in _auth.js), not by anything the browser page itself
+    -- controls, so clearing localStorage or just reopening the site can't
+    -- let the same visitor count twice.
+    CREATE TABLE IF NOT EXISTS reactions (
+      submission_id TEXT NOT NULL REFERENCES submissions(id),
+      visitor_id TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (submission_id, visitor_id)
+    );
+
     -- Poster numbers used to be a random 3-digit pick (100-999); new
     -- submissions now draw a sequential number from this sequence instead,
     -- starting at 1 (see renumberPostersOnce below for the one-time switch

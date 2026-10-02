@@ -72,6 +72,25 @@ function readCookie(req, name) {
   return null;
 }
 
+// A long-lived, opaque per-browser id used only to stop the same visitor
+// reacting to the same poster more than once (see POST
+// /api/submissions/:id/reaction). Not a login session — no signature, no
+// role, nothing worth forging — just a random id the server hands out once
+// and then recognizes. localStorage alone can't do this job: the person
+// asked specifically that re-opening the site must not reset the count,
+// and a value only the server reads and writes survives that, where a
+// value the page itself reads/writes (localStorage) is trivial to clear.
+export const VISITOR_COOKIE = "stf_visitor";
+const VISITOR_TTL_SECONDS = 60 * 60 * 24 * 365 * 2; // 2 years
+
+export function ensureVisitorId(req, res) {
+  const existing = readCookie(req, VISITOR_COOKIE);
+  if (existing && /^[a-f0-9-]{10,80}$/i.test(existing)) return existing;
+  const id = crypto.randomUUID();
+  res.append("Set-Cookie", `${VISITOR_COOKIE}=${id}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${VISITOR_TTL_SECONDS}`);
+  return id;
+}
+
 export function verifySession(req, sessionSecret) {
   const token = readCookie(req, SESSION_COOKIE);
   if (!token) return null;

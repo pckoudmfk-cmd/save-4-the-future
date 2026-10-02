@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode, ChangeEvent } from "react";
+import type { ReactNode, ChangeEvent, MouseEvent } from "react";
 import { Icon28ArrowLeftOutline, Icon28ChevronRightOutline } from "@vkontakte/icons";
 import { Button, Input, Textarea, Card, Div, Title, Text, Separator } from "@vkontakte/vkui";
 import { db, total } from "./store";
@@ -230,6 +230,36 @@ function Page({ title, lead, children }: { title: string; lead?: string; childre
   );
 }
 function PosterCard({ w, onClick }: { w: Submission; onClick: () => void }) {
+  const [reacted, setReacted] = useState(false);
+  const [reacting, setReacting] = useState(false);
+  const [audience, setAudience] = useState(w.audience);
+
+  useEffect(() => {
+    setReacted(!!localStorage.getItem("reacted:" + w.id));
+    setAudience(w.audience);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [w.id]);
+
+  const react = async (e: MouseEvent) => {
+    e.stopPropagation(); // don't also trigger the card's onClick (open the poster)
+    if (reacted || reacting) return;
+    setReacting(true);
+    try {
+      if (hasApi()) {
+        const r = await api.reaction(w.id);
+        setAudience(r.audience);
+      } else {
+        setAudience(db.react(w.id));
+      }
+      setReacted(true);
+      localStorage.setItem("reacted:" + w.id, "1");
+    } catch {
+      /* the visitor can just try again */
+    } finally {
+      setReacting(false);
+    }
+  };
+
   return (
     <Card className="posterCard" onClick={onClick}>
       <div className="posterVisual">
@@ -253,7 +283,15 @@ function PosterCard({ w, onClick }: { w: Submission; onClick: () => void }) {
             {w.group ? " · " + w.group : ""}
           </Text>
         )}
-        <Text className="muted">«Этот постер заставил меня задуматься» · {w.audience}</Text>
+        <button
+          className={reacted ? "reactionBtn reactionBtn-compact reactionBtn-done" : "reactionBtn reactionBtn-compact"}
+          onClick={react}
+          disabled={reacted || reacting}
+        >
+          <span>{reacted ? "❤" : "♡"}</span>
+          «Этот постер заставил меня задуматься»
+          <b>{audience}</b>
+        </button>
       </Div>
     </Card>
   );

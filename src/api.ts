@@ -86,7 +86,11 @@ export const api = {
   // gap in poster numbering the server's renumbering pass leaves behind.
   deleteSubmission: (id: string) => request<{ ok: true }>("/api/submissions/" + id, { method: "DELETE" }),
   score: (id: string, score: Score) => request<{ ok: true; total: number }>("/api/submissions/" + id + "/score", { method: "PUT", body: JSON.stringify(score) }),
-  reaction: (id: string) => request<{ ok: true; audience: number }>("/api/submissions/" + id + "/reaction", { method: "POST" }),
+  // alreadyReacted comes from the server's own per-visitor cookie record,
+  // not from localStorage — it's the authoritative answer to "has this
+  // browser reacted to this poster before", even after clearing local
+  // storage or reopening the site.
+  reaction: (id: string) => request<{ ok: true; audience: number; alreadyReacted: boolean }>("/api/submissions/" + id + "/reaction", { method: "POST" }),
   results: () => request<{ results: ResultRow[]; namesRevealed: boolean }>("/api/results"),
 
   listAccounts: () => request<{ users: Account[] }>("/api/admin/users").then((r) => r.users),

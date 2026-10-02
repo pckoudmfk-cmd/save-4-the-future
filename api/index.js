@@ -11,6 +11,7 @@ import {
   requireRole,
   CLEAR_SESSION_COOKIE,
   HttpError,
+  ensureVisitorId,
 } from "./_auth.js";
 
 const SESSION_SECRET = process.env.SESSION_SECRET;
@@ -356,16 +357,52 @@ app.put(
   })
 );
 
-// ---- submissions: audience reaction (public) ----
+// ---- submissions: audience reaction (public, one per visitor per poster) ----
+// The visitor cookie (not localStorage) is the source of truth for "has
+// this person already reacted" — see ensureVisitorId in _auth.js. A second
+// click, a reload, or reopening the site in a new tab all carry the same
+// cookie, so they all land on the ON CONFLICT DO NOTHING branch below and
+// the count does not move; only a genuinely new visitor increments it.
 app.post(
   "/api/submissions/:id/reaction",
   asyncRoute(async (req, res) => {
-    const { rows } = await pool.query(
-      "UPDATE submissions SET audience_count=audience_count+1 WHERE id=$1 RETURNING audience_count",
-      [req.params.id]
-    );
-    if (!rows[0]) return res.status(404).json({ error: "not_found" });
-    res.json({ ok: true, audience: rows[0].audience_count });
+    const visitorId = ensureVisitorId(req, res);
+    const client = await pool.connect();
+    let alreadyReacted = false;
+    try {
+      await client.query("BEGIN");
+      const inserted = await client.query(
+        "INSERT INTO reactions(submission_id, visitor_id) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING submission_id",
+        [req.params.id, visitorId]
+      );
+      alreadyReacted = inserted.rowCount === 0;
+      let audience;
+      if (alreadyReacted) {
+        const { rows } = await client.query("SELECT audience_count FROM submissions WHERE id=$1", [req.params.id]);
+        if (!rows[0]) {
+          await client.query("ROLLBACK");
+          return res.status(404).json({ error: "not_found" });
+        }
+        audience = rows[0].audience_count;
+      } else {
+        const { rows } = await client.query(
+          "UPDATE submissions SET audience_count=audience_count+1 WHERE id=$1 RETURNING audience_count",
+          [req.params.id]
+        );
+        if (!rows[0]) {
+          await client.query("ROLLBACK");
+          return res.status(404).json({ error: "not_found" });
+        }
+        audience = rows[0].audience_count;
+      }
+      await client.query("COMMIT");
+      res.json({ ok: true, audience, alreadyReacted });
+    } catch (e) {
+      await client.query("ROLLBACK");
+      throw e;
+    } finally {
+      client.release();
+    }
   })
 );
 
