@@ -836,7 +836,9 @@ function JuryInstructions() {
 function JuryWorkspace({ name, logout }: { name: string; logout: () => void }) {
   const [works, setWorks] = useState<Submission[]>([]);
   const [selected, setSelected] = useState("");
-  const [score, setScore] = useState<Score>({ idea: 10, english: 10, originality: 10, design: 10, digital: 10 });
+  const defaultScore: Score = { idea: 10, english: 10, originality: 10, design: 10, digital: 10 };
+  const [score, setScore] = useState<Score>(defaultScore);
+  const [myScores, setMyScores] = useState<Record<string, Score>>({});
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
@@ -848,6 +850,18 @@ function JuryWorkspace({ name, logout }: { name: string; logout: () => void }) {
         if (!cancelled) setWorks(list.filter((x) => x.status === "published" || x.status === "winner"));
       } catch {
         /* keep empty list on failure */
+      }
+      try {
+        const { scores } = await api.myScores();
+        if (!cancelled) {
+          const map: Record<string, Score> = {};
+          scores.forEach((s) => {
+            map[s.submissionId] = { idea: s.idea, english: s.english, originality: s.originality, design: s.design, digital: s.digital };
+          });
+          setMyScores(map);
+        }
+      } catch {
+        /* a juror simply sees the default form if this fails */
       }
     })();
     return () => {
@@ -862,6 +876,7 @@ function JuryWorkspace({ name, logout }: { name: string; logout: () => void }) {
     try {
       await api.score(current.id, score);
       setSaved(true);
+      setMyScores({ ...myScores, [current.id]: score });
     } catch {
       setError("Не удалось сохранить оценку. Проверьте соединение и попробуйте ещё раз.");
     }
@@ -884,14 +899,15 @@ function JuryWorkspace({ name, logout }: { name: string; logout: () => void }) {
               className={selected === w.id ? "juryWork selected" : "juryWork"}
               onClick={() => {
                 setSelected(w.id);
-                setSaved(false);
+                setScore(myScores[w.id] || defaultScore);
+                setSaved(!!myScores[w.id]);
                 setError("");
               }}
               key={w.id}
             >
               <span>#{posterLabel(w.posterNo)}</span>
               <b>Работа {i + 1}</b>
-              <small>{w.interactive ? "INTERACTIVE" : "DIGITAL POSTER"}</small>
+              <small>{w.interactive ? "INTERACTIVE" : "DIGITAL POSTER"}{myScores[w.id] ? " · оценено" : ""}</small>
             </button>
           ))}
         </aside>

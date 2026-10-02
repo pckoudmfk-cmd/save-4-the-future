@@ -382,6 +382,25 @@ app.put(
   })
 );
 
+// ---- submissions: my own previously saved scores (jury or organizer) ----
+// Lets a juror see their own past scores when they revisit a poster,
+// instead of the form silently resetting to the default 10s every time.
+// Keyed by submission_id so the frontend can look up one poster at a time;
+// this is the juror's own rows only, never anyone else's — the named,
+// cross-juror breakdown stays exclusive to /api/admin/scores above.
+app.get(
+  "/api/scores/mine",
+  asyncRoute(async (req, res) => {
+    const session = requireRole(req, SESSION_SECRET, ["jury", "organizer"]);
+    const { rows } = await pool.query(
+      `SELECT submission_id as "submissionId", idea, english, originality, design, digital
+       FROM scores WHERE jury_user_id=$1`,
+      [String(session.uid)]
+    );
+    res.json({ scores: rows });
+  })
+);
+
 // ---- submissions: audience reaction (public, one per visitor per poster) ----
 // The visitor cookie (not localStorage) is the source of truth for "has
 // this person already reacted" — see ensureVisitorId in _auth.js. A second

@@ -86,6 +86,13 @@ export const api = {
   // gap in poster numbering the server's renumbering pass leaves behind.
   deleteSubmission: (id: string) => request<{ ok: true }>("/api/submissions/" + id, { method: "DELETE" }),
   score: (id: string, score: Score) => request<{ ok: true; total: number }>("/api/submissions/" + id + "/score", { method: "PUT", body: JSON.stringify(score) }),
+  // The calling juror's own previously saved scores, keyed by submission —
+  // used to prefill the scoring form instead of resetting it to defaults
+  // each time a poster is reopened. Never anyone else's scores.
+  myScores: () =>
+    request<{ scores: Array<{ submissionId: string; idea: number; english: number; originality: number; design: number; digital: number }> }>(
+      "/api/scores/mine"
+    ),
   // alreadyReacted comes from the server's own per-visitor cookie record,
   // not from localStorage — it's the authoritative answer to "has this
   // browser reacted to this poster before", even after clearing local
