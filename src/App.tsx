@@ -1451,17 +1451,67 @@ function Poster({ setView }: { setView: (v: View) => void }) {
   );
 }
 
+// Reads the poster id a navigation to the "poster" view should carry. The
+// rest of the app already writes the id to sessionStorage right before
+// calling setView("poster") (see the exhibition grid and slideshow), so
+// this just reads it back at the moment of navigating/restoring history.
+function currentPosterId(): string {
+  return sessionStorage.getItem("poster") || "";
+}
+
+type NavState = { view: View; posterId: string };
+
+function historyUrl(v: View, posterId: string): string {
+  if (v === "home") return window.location.pathname;
+  const params = new URLSearchParams();
+  params.set("view", v);
+  if (v === "poster" && posterId) params.set("poster", posterId);
+  return `${window.location.pathname}?${params.toString()}`;
+}
+
 export default function App() {
   const [view, setView] = useState<View>(() => {
     const requested = new URLSearchParams(window.location.search).get("view");
     return requested === "jury" || requested === "admin" ? (requested as View) : "home";
   });
+  const [posterId, setPosterId] = useState("");
+
+  // One history entry for the initial page, so pressing "back" from the
+  // first place the person clicks into lands here instead of leaving the
+  // site entirely — every further navigate() call below pushes on top of it.
+  useEffect(() => {
+    window.history.replaceState({ view, posterId: view === "poster" ? currentPosterId() : "" } as NavState, "", historyUrl(view, currentPosterId()));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The browser's own back/forward buttons: restore whichever view (and,
+  // for a poster, which poster) that history entry was for.
+  useEffect(() => {
+    const onPopState = (e: PopStateEvent) => {
+      const state = e.state as NavState | null;
+      const nextView = state?.view || "home";
+      const nextPosterId = state?.posterId || "";
+      if (nextView === "poster" && nextPosterId) sessionStorage.setItem("poster", nextPosterId);
+      setView(nextView);
+      setPosterId(nextPosterId);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const navigate = (v: View) => {
+    const nextPosterId = v === "poster" ? currentPosterId() : "";
+    window.history.pushState({ view: v, posterId: nextPosterId } as NavState, "", historyUrl(v, nextPosterId));
+    setView(v);
+    setPosterId(nextPosterId);
+  };
+
   const body = useMemo(() => {
     switch (view) {
       case "home":
         return null;
       case "exhibition":
-        return <Exhibition setView={setView} />;
+        return <Exhibition setView={navigate} />;
       case "join":
         return <Join />;
       case "jury":
@@ -1473,12 +1523,13 @@ export default function App() {
       case "about":
         return <About />;
       case "poster":
-        return <Poster setView={setView} />;
+        return <Poster key={posterId} setView={navigate} />;
     }
-  }, [view]);
-  return <div className="app">{view === "home" ? <ApprovedCover setView={setView} /> : (
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, posterId]);
+  return <div className="app">{view === "home" ? <ApprovedCover setView={navigate} /> : (
     <>
-      <Header view={view} setView={setView} />
+      <Header view={view} setView={navigate} />
       {body}
     </>
   )}</div>;
