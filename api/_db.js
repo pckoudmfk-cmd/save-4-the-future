@@ -96,16 +96,22 @@ export async function ensureSchema() {
 // runs exactly once across every serverless instance, not once per cold
 // start. Safe to run concurrently with new submissions: the old random
 // numbers are all >= 100, so the sequential 1..N targets can't collide with
-// rows this pass hasn't reached yet.
-async function renumberPostersOnce() {
-  const already = await getSetting("poster_no_renumbered", "false");
-  if (already === "true") return;
+// rows this pass hasn't reached yet. Returns a small report so a caller
+// (see the /api/admin/renumber-posters route) can confirm what happened
+// instead of having to trust a silent success.
+export async function renumberPostersOnce(force) {
+  if (!force) {
+    const already = await getSetting("poster_no_renumbered", "false");
+    if (already === "true") return { ran: false, reason: "already_done" };
+  }
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const { rows } = await client.query("SELECT id FROM submissions ORDER BY created_at ASC FOR UPDATE");
+    const { rows } = await client.query("SELECT id, poster_no FROM submissions ORDER BY created_at ASC FOR UPDATE");
+    const mapping = [];
     for (let i = 0; i < rows.length; i++) {
       await client.query("UPDATE submissions SET poster_no=$1 WHERE id=$2", [i + 1, rows[i].id]);
+      mapping.push({ from: rows[i].poster_no, to: i + 1 });
     }
     await client.query("SELECT setval('poster_no_seq', $1, true)", [rows.length]);
     await client.query(
@@ -113,6 +119,7 @@ async function renumberPostersOnce() {
        ON CONFLICT(key) DO UPDATE SET value=excluded.value`
     );
     await client.query("COMMIT");
+    return { ran: true, count: rows.length, mapping };
   } catch (e) {
     await client.query("ROLLBACK");
     throw e;

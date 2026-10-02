@@ -2,7 +2,7 @@ import express from "express";
 import crypto from "node:crypto";
 import { put as blobPut } from "@vercel/blob";
 
-import { pool, ensureSchema, getSetting, setSetting } from "./_db.js";
+import { pool, ensureSchema, getSetting, setSetting, renumberPostersOnce } from "./_db.js";
 import {
   hashPassword,
   verifyPassword,
@@ -69,6 +69,23 @@ app.get("/api/health", async (req, res) => {
     info.dbError = String(e && e.message ? e.message : e);
   }
   res.status(200).json(info);
+});
+
+// One-off maintenance endpoint, not linked from the app: lets the organizer
+// (or whoever holds the setup key) confirm the one-time poster-number
+// renumbering actually ran, and re-run it on demand if it didn't. Guarded by
+// SETUP_KEY, the same secret the initial account bootstrap uses — not a
+// session, since this needs to work even before any account exists.
+app.get("/api/admin/renumber-posters", async (req, res) => {
+  try {
+    if (!SETUP_KEY || req.query.key !== SETUP_KEY) return res.status(401).json({ error: "unauthorized" });
+    await ensureSchema();
+    const result = await renumberPostersOnce(req.query.force === "1");
+    res.json(result);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e && e.message ? e.message : "server_error" });
+  }
 });
 
 app.use(async (req, res, next) => {
