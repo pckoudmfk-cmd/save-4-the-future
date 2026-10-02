@@ -12,6 +12,10 @@ import { criteria } from "./types";
 // so images work whether the app is served at the domain root or under a subpath.
 const asset = (path: string) => import.meta.env.BASE_URL + path;
 
+// Poster numbers are sequential (1, 2, 3...) but always shown 3 digits wide
+// ("#001") so the display doesn't shrink and grow as the contest fills up.
+const posterLabel = (n: number) => String(n).padStart(3, "0");
+
 type View = "home" | "exhibition" | "join" | "jury" | "admin" | "results" | "about" | "poster";
 const nav: [View, string, string][] = [
   ["home", "Главная", "⌂"],
@@ -233,7 +237,7 @@ function PosterCard({ w, onClick }: { w: Submission; onClick: () => void }) {
           <img src={w.imageUrl} />
         ) : (
           <>
-            <span className="posterNo">#{w.posterNo}</span>
+            <span className="posterNo">#{posterLabel(w.posterNo)}</span>
             <strong>{w.title}</strong>
             <small>{w.idea}</small>
           </>
@@ -241,7 +245,7 @@ function PosterCard({ w, onClick }: { w: Submission; onClick: () => void }) {
       </div>
       <Div>
         <Text weight="2">
-          #{w.posterNo} · {w.interactive ? "INTERACTIVE" : "DIGITAL POSTER"}
+          #{posterLabel(w.posterNo)} · {w.interactive ? "INTERACTIVE" : "DIGITAL POSTER"}
         </Text>
         {w.author && (
           <Text className="posterAuthor">
@@ -366,7 +370,7 @@ function GallerySlideshow({ works, onClose }: { works: Submission[]; onClose: ()
       </div>
       <div className="slideInfo">
         <span className="slideNo">
-          #{w.posterNo}
+          #{posterLabel(w.posterNo)}
           {w.interactive ? " · INTERACTIVE" : " · DIGITAL POSTER"}
         </span>
         <h2>{w.title}</h2>
@@ -559,7 +563,8 @@ function Join() {
         setPosterNo(r.posterNo);
       } else {
         const id = crypto.randomUUID();
-        const no = Math.floor(100 + Math.random() * 900);
+        const existing = db.submissions();
+        const no = existing.length ? Math.max(...existing.map((s) => s.posterNo)) + 1 : 1;
         db.add({ id, posterNo: no, ...f, interactive: !!f.interactiveUrl, status: "moderation", createdAt: new Date().toISOString(), audience: 0 });
         setPosterNo(no);
       }
@@ -605,7 +610,7 @@ function Join() {
         </Button>
         {done && (
           <div className="success">
-            Работа отправлена{posterNo ? ` · номер #${posterNo}` : ""}. Статус: SUBMITTED → ожидает модерации.
+            Работа отправлена{posterNo ? ` · номер #${posterLabel(posterNo)}` : ""}. Статус: SUBMITTED → ожидает модерации.
           </div>
         )}
       </Card>
@@ -837,7 +842,7 @@ function JuryWorkspace({ name, logout }: { name: string; logout: () => void }) {
               }}
               key={w.id}
             >
-              <span>#{String(w.posterNo).padStart(3, "0")}</span>
+              <span>#{posterLabel(w.posterNo)}</span>
               <b>Работа {i + 1}</b>
               <small>{w.interactive ? "INTERACTIVE" : "DIGITAL POSTER"}</small>
             </button>
@@ -848,17 +853,17 @@ function JuryWorkspace({ name, logout }: { name: string; logout: () => void }) {
             <>
               <div className="juryPosterStage">
                 {current.imageUrl ? (
-                  <img src={current.imageUrl} alt={"Постер #" + current.posterNo} />
+                  <img src={current.imageUrl} alt={"Постер #" + posterLabel(current.posterNo)} />
                 ) : (
                   <div className="juryPosterPlaceholder">
-                    <span>#{current.posterNo}</span>
+                    <span>#{posterLabel(current.posterNo)}</span>
                     <strong>{current.title}</strong>
                     <small>{current.idea}</small>
                   </div>
                 )}
               </div>
               <div className="juryMeta">
-                <span>ПОСТЕР #{current.posterNo}</span>
+                <span>ПОСТЕР #{posterLabel(current.posterNo)}</span>
                 <span>АВТОР: СКРЫТ</span>
                 <span>КОНТАКТЫ: СКРЫТЫ</span>
               </div>
@@ -1050,9 +1055,9 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
             <Card key={w.id}>
               <div className="adminRow">
                 <div className="adminThumb">
-                  {w.imageUrl ? <img src={w.imageUrl} alt={w.title} /> : <span>#{w.posterNo}</span>}
+                  {w.imageUrl ? <img src={w.imageUrl} alt={w.title} /> : <span>#{posterLabel(w.posterNo)}</span>}
                 </div>
-                <b>#{w.posterNo}</b>
+                <b>#{posterLabel(w.posterNo)}</b>
                 <span>{w.title}</span>
                 <small>
                   {w.author || "—"} · {w.group || "—"} · {w.contact || "—"}
@@ -1129,7 +1134,7 @@ function Results() {
           return (
             <Card key={w.id}>
               <div className="resultRow">
-                <b>#{w.posterNo}</b>
+                <b>#{posterLabel(w.posterNo)}</b>
                 <span>
                   {w.title}
                   {w.author && <small className="resultAuthor">{w.author}{w.group ? " · " + w.group : ""}</small>}
@@ -1205,7 +1210,7 @@ function Poster({ setView }: { setView: (v: View) => void }) {
       </Page>
     );
   return (
-    <Page title={"Постер #" + w.posterNo} lead={w.author ? `${w.title} · ${w.author}${w.group ? " · " + w.group : ""}` : w.title}>
+    <Page title={"Постер #" + posterLabel(w.posterNo)} lead={w.author ? `${w.title} · ${w.author}${w.group ? " · " + w.group : ""}` : w.title}>
       <Card className="detailCard">
         <div className="posterDetail">
           {w.imageUrl ? (

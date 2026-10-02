@@ -79,8 +79,46 @@ export async function ensureSchema() {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    -- Poster numbers used to be a random 3-digit pick (100-999); new
+    -- submissions now draw a sequential number from this sequence instead,
+    -- starting at 1 (see renumberPostersOnce below for the one-time switch
+    -- of existing rows onto this same numbering).
+    CREATE SEQUENCE IF NOT EXISTS poster_no_seq;
   `);
+  await renumberPostersOnce();
   migrated = true;
+}
+
+// One-time migration: renumber every existing submission 1, 2, 3... in the
+// order it was submitted, and point poster_no_seq at the next free number —
+// guarded by a settings flag (not just the in-memory `migrated` above) so it
+// runs exactly once across every serverless instance, not once per cold
+// start. Safe to run concurrently with new submissions: the old random
+// numbers are all >= 100, so the sequential 1..N targets can't collide with
+// rows this pass hasn't reached yet.
+async function renumberPostersOnce() {
+  const already = await getSetting("poster_no_renumbered", "false");
+  if (already === "true") return;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query("SELECT id FROM submissions ORDER BY created_at ASC FOR UPDATE");
+    for (let i = 0; i < rows.length; i++) {
+      await client.query("UPDATE submissions SET poster_no=$1 WHERE id=$2", [i + 1, rows[i].id]);
+    }
+    await client.query("SELECT setval('poster_no_seq', $1, true)", [rows.length]);
+    await client.query(
+      `INSERT INTO settings(key,value) VALUES('poster_no_renumbered','true')
+       ON CONFLICT(key) DO UPDATE SET value=excluded.value`
+    );
+    await client.query("COMMIT");
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 // Settings are a simple key/value pair, always read/written as strings by

@@ -252,7 +252,8 @@ app.post(
     const b = req.body || {};
     if (!b.title || !b.idea || !b.aiHow) return res.status(400).json({ error: "title, idea and aiHow are required" });
     const id = crypto.randomUUID();
-    const posterNo = Math.floor(100 + Math.random() * 900);
+    const { rows: seqRows } = await pool.query("SELECT nextval('poster_no_seq') AS n");
+    const posterNo = Number(seqRows[0].n);
     await pool.query(
       `INSERT INTO submissions(id,poster_no,title,idea,problem,author,group_name,contact,tools,ai_how,contribution,interactive,interactive_url,status)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'moderation')`,
