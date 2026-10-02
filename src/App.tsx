@@ -188,9 +188,14 @@ function ApprovedCover({ setView }: { setView: (v: View) => void }) {
               <span className="coverCardArrow">›</span>
             </button>
           ))}
-          <div className="coverCard deadlineCard">
+          <div className="coverCard card-05 deadlineCard">
+            <span className="coverCardNo">05</span>
             <span className="coverCardIcon">⏳</span>
-            <b>Заявки принимаются до 20 октября</b>
+            <b>
+              Заявки принимаются
+              <br />
+              до 20 октября
+            </b>
           </div>
         </section>
         <footer className="coverFooter">
