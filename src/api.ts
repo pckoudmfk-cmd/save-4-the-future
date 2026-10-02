@@ -94,7 +94,8 @@ export const api = {
   results: () => request<{ results: ResultRow[]; namesRevealed: boolean }>("/api/results"),
 
   listAccounts: () => request<{ users: Account[] }>("/api/admin/users").then((r) => r.users),
-  createAccount: (username: string, password: string, role: Role) => request<{ ok: true }>("/api/admin/users", { method: "POST", body: JSON.stringify({ username, password, role }) }),
+  createAccount: (username: string, password: string, role: Role, displayName?: string) =>
+    request<{ ok: true }>("/api/admin/users", { method: "POST", body: JSON.stringify({ username, password, role, displayName }) }),
 
   // Whether the organizer has revealed author names publicly. GET works for
   // anyone (jury/gallery visitors need to know); only the organizer can PATCH it.

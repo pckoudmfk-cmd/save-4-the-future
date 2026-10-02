@@ -980,7 +980,7 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
   const [tab, setTab] = useState<"moderation" | "accounts">("moderation");
   const [works, setWorks] = useState<Submission[]>([]);
   const [accounts, setAccounts] = useState<{ id: number; username: string; role: Role; display_name: string | null }[]>([]);
-  const [newAccount, setNewAccount] = useState({ username: "", password: "", role: "jury" as Role });
+  const [newAccount, setNewAccount] = useState({ username: "", password: "", displayName: "", role: "jury" as Role });
   const [message, setMessage] = useState("");
   const [namesRevealed, setNamesRevealedState] = useState<boolean | null>(null);
   const [revealBusy, setRevealBusy] = useState(false);
@@ -1066,8 +1066,8 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
       return;
     }
     try {
-      await api.createAccount(newAccount.username, newAccount.password, newAccount.role);
-      setNewAccount({ username: "", password: "", role: "jury" });
+      await api.createAccount(newAccount.username, newAccount.password, newAccount.role, newAccount.displayName || undefined);
+      setNewAccount({ username: "", password: "", displayName: "", role: "jury" });
       setMessage("Аккаунт создан.");
       await loadAccounts();
     } catch {
@@ -1152,6 +1152,11 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
       ) : (
         <Card className="formCard">
           <Title level="3">Новый аккаунт</Title>
+          <Input
+            value={newAccount.displayName}
+            onChange={(e) => setNewAccount({ ...newAccount, displayName: e.target.value })}
+            placeholder="Имя (ФИО члена жюри — это увидит он сам после входа)"
+          />
           <Input value={newAccount.username} onChange={(e) => setNewAccount({ ...newAccount, username: e.target.value })} placeholder="Логин" />
           <Input type="password" value={newAccount.password} onChange={(e) => setNewAccount({ ...newAccount, password: e.target.value })} placeholder="Пароль" />
           <select className="roleSelect" value={newAccount.role} onChange={(e) => setNewAccount({ ...newAccount, role: e.target.value as Role })}>
@@ -1165,7 +1170,7 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
           <Title level="3">Существующие аккаунты</Title>
           {accounts.map((a) => (
             <Text key={a.id}>
-              {a.username} — {a.role === "organizer" ? "админ" : "жюри"}
+              {a.display_name && a.display_name !== a.username ? `${a.display_name} (${a.username})` : a.username} — {a.role === "organizer" ? "админ" : "жюри"}
             </Text>
           ))}
           {accounts.length === 0 && <Text className="muted">Аккаунтов пока нет.</Text>}
