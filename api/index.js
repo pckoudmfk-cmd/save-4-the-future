@@ -224,6 +224,34 @@ app.post(
   })
 );
 
+// Update an existing account — e.g. set/fix a juror's display name, or
+// reset their password if they forgot it. Does not touch username, since
+// that's how the organizer identifies which existing account to edit (the
+// create-account form is for *new* logins only; a login that already
+// exists has to go through this route instead).
+app.patch(
+  "/api/admin/users/:id",
+  asyncRoute(async (req, res) => {
+    requireRole(req, SESSION_SECRET, ["organizer"]);
+    const b = req.body || {};
+    const sets = [];
+    const vals = [];
+    if (typeof b.displayName === "string") {
+      sets.push(`display_name=$${sets.length + 1}`);
+      vals.push(b.displayName);
+    }
+    if (typeof b.password === "string" && b.password) {
+      sets.push(`password_hash=$${sets.length + 1}`);
+      vals.push(hashPassword(b.password));
+    }
+    if (sets.length === 0) return res.status(400).json({ error: "nothing_to_update" });
+    vals.push(req.params.id);
+    const { rowCount } = await pool.query(`UPDATE users SET ${sets.join(",")} WHERE id=$${vals.length}`, vals);
+    if (rowCount === 0) return res.status(404).json({ error: "not_found" });
+    res.json({ ok: true });
+  })
+);
+
 // ---- admin: per-juror score breakdown (organizer only) ----
 // Named scores exist nowhere else in the app on purpose — the public
 // /api/results route is a juror-count and an average, by design, so

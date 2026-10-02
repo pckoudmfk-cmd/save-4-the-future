@@ -121,6 +121,11 @@ export const api = {
     }>("/api/admin/scores"),
 
   listAccounts: () => request<{ users: Account[] }>("/api/admin/users").then((r) => r.users),
+  // For an account that already exists (e.g. to add a jury member's name
+  // after the fact, or reset a forgotten password) — never creates a new
+  // login. password is optional; omit it to leave it unchanged.
+  updateAccount: (id: number, data: { displayName?: string; password?: string }) =>
+    request<{ ok: true }>("/api/admin/users/" + id, { method: "PATCH", body: JSON.stringify(data) }),
   createAccount: (username: string, password: string, role: Role, displayName?: string) =>
     request<{ ok: true }>("/api/admin/users", { method: "POST", body: JSON.stringify({ username, password, role, displayName }) }),
 

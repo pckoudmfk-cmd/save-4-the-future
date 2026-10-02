@@ -1104,8 +1104,32 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
       setNewAccount({ username: "", password: "", displayName: "", role: "jury" });
       setMessage("Аккаунт создан.");
       await loadAccounts();
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : "";
+      setMessage(
+        reason === "username_taken"
+          ? "Этот логин уже существует. Чтобы вписать имя или сменить пароль уже существующему аккаунту, используйте «Изменить» рядом с ним в списке ниже, а не форму создания."
+          : "Не удалось создать аккаунт."
+      );
+    }
+  };
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState({ displayName: "", password: "" });
+  const startEdit = (a: { id: number; display_name: string | null }) => {
+    setEditingId(a.id);
+    setEditDraft({ displayName: a.display_name || "", password: "" });
+    setMessage("");
+  };
+  const saveEdit = async () => {
+    if (editingId === null) return;
+    setMessage("");
+    try {
+      await api.updateAccount(editingId, { displayName: editDraft.displayName, password: editDraft.password || undefined });
+      setEditingId(null);
+      setMessage("Аккаунт обновлён.");
+      await loadAccounts();
     } catch {
-      setMessage("Не удалось создать аккаунт — возможно, логин уже занят.");
+      setMessage("Не удалось обновить аккаунт.");
     }
   };
 
@@ -1242,11 +1266,41 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
           </Button>
           <Separator />
           <Title level="3">Существующие аккаунты</Title>
-          {accounts.map((a) => (
-            <Text key={a.id}>
-              {a.display_name && a.display_name !== a.username ? `${a.display_name} (${a.username})` : a.username} — {a.role === "organizer" ? "админ" : "жюри"}
-            </Text>
-          ))}
+          {accounts.map((a) =>
+            editingId === a.id ? (
+              <Div key={a.id} className="accountEditRow">
+                <Input
+                  value={editDraft.displayName}
+                  onChange={(e) => setEditDraft({ ...editDraft, displayName: e.target.value })}
+                  placeholder="Имя (ФИО члена жюри)"
+                />
+                <Input
+                  type="password"
+                  value={editDraft.password}
+                  onChange={(e) => setEditDraft({ ...editDraft, password: e.target.value })}
+                  placeholder="Новый пароль (оставьте пустым, если менять не нужно)"
+                />
+                <div className="adminActions">
+                  <Button size="s" mode="primary" onClick={saveEdit}>
+                    Сохранить
+                  </Button>
+                  <Button size="s" mode="secondary" onClick={() => setEditingId(null)}>
+                    Отмена
+                  </Button>
+                </div>
+              </Div>
+            ) : (
+              <div className="accountRow" key={a.id}>
+                <Text>
+                  {a.display_name && a.display_name !== a.username ? `${a.display_name} (${a.username})` : a.username} —{" "}
+                  {a.role === "organizer" ? "админ" : "жюри"}
+                </Text>
+                <Button size="s" mode="secondary" onClick={() => startEdit(a)}>
+                  Изменить
+                </Button>
+              </div>
+            )
+          )}
           {accounts.length === 0 && <Text className="muted">Аккаунтов пока нет.</Text>}
         </Card>
       )}
