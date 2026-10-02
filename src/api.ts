@@ -82,6 +82,9 @@ export const api = {
   },
 
   setStatus: (id: string, status: Submission["status"]) => request<{ ok: true }>("/api/submissions/" + id + "/status", { method: "PATCH", body: JSON.stringify({ status }) }),
+  // Organizer only — removes a submission (e.g. a duplicate) and closes the
+  // gap in poster numbering the server's renumbering pass leaves behind.
+  deleteSubmission: (id: string) => request<{ ok: true }>("/api/submissions/" + id, { method: "DELETE" }),
   score: (id: string, score: Score) => request<{ ok: true; total: number }>("/api/submissions/" + id + "/score", { method: "PUT", body: JSON.stringify(score) }),
   reaction: (id: string) => request<{ ok: true; audience: number }>("/api/submissions/" + id + "/reaction", { method: "POST" }),
   results: () => request<{ results: ResultRow[]; namesRevealed: boolean }>("/api/results"),

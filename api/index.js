@@ -1,6 +1,6 @@
 import express from "express";
 import crypto from "node:crypto";
-import { put as blobPut } from "@vercel/blob";
+import { put as blobPut, del as blobDel } from "@vercel/blob";
 
 import { pool, ensureSchema, getSetting, setSetting, renumberPostersOnce } from "./_db.js";
 import {
@@ -52,7 +52,7 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", allow);
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Headers", "content-type, x-setup-key");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
   res.setHeader("Vary", "Origin");
   if (req.method === "OPTIONS") return res.status(204).end();
   next();
@@ -293,6 +293,44 @@ app.patch(
     if (!STATUS_VALUES.includes(b.status)) return res.status(400).json({ error: "invalid_status" });
     await pool.query("UPDATE submissions SET status=$1 WHERE id=$2", [b.status, req.params.id]);
     res.json({ ok: true });
+  })
+);
+
+// ---- submissions: delete (organizer only — e.g. a duplicate submission) ----
+// Removes the submission's jury scores first (no ON DELETE CASCADE on that
+// foreign key), then the submission itself, then re-closes the gap this
+// leaves in the poster numbering by running the same renumbering pass the
+// one-time migration used — so after a delete, posters stay a contiguous
+// 1..N with no missing number, exactly as if the duplicate had never been
+// submitted. The poster's uploaded image is also removed from blob storage;
+// that part is best-effort and never blocks the delete itself.
+app.delete(
+  "/api/submissions/:id",
+  asyncRoute(async (req, res) => {
+    requireRole(req, SESSION_SECRET, ["organizer"]);
+    const { rows } = await pool.query("SELECT image_key FROM submissions WHERE id=$1", [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: "not_found" });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("DELETE FROM scores WHERE submission_id=$1", [req.params.id]);
+      await client.query("DELETE FROM submissions WHERE id=$1", [req.params.id]);
+      await client.query("COMMIT");
+    } catch (e) {
+      await client.query("ROLLBACK");
+      throw e;
+    } finally {
+      client.release();
+    }
+    if (rows[0].image_key && /^https?:\/\//.test(rows[0].image_key)) {
+      try {
+        await blobDel(rows[0].image_key);
+      } catch (e) {
+        console.error("Failed to delete blob for removed submission", e);
+      }
+    }
+    const renumber = await renumberPostersOnce(true);
+    res.json({ ok: true, renumber });
   })
 );
 

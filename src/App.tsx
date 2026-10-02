@@ -979,6 +979,23 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
       }
     }
   };
+  const deleteWork = async (id: string, label: string) => {
+    if (!window.confirm(`Удалить постер ${label} безвозвратно? Оценки жюри по нему тоже будут удалены, а номера остальных постеров пересчитаются.`)) {
+      return;
+    }
+    setMessage("");
+    try {
+      await api.deleteSubmission(id);
+      await loadWorks();
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : "";
+      if (reason === "unauthorized" || reason === "forbidden") {
+        setMessage("Сессия администратора истекла — выйдите и войдите заново.");
+      } else {
+        setMessage("Не удалось удалить постер. Проверьте соединение и попробуйте ещё раз.");
+      }
+    }
+  };
   const toggleNamesRevealed = async () => {
     if (namesRevealed === null) return;
     const next = !namesRevealed;
@@ -1075,6 +1092,9 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
                   </Button>
                   <Button size="s" mode="secondary" onClick={() => setStatus(w.id, "winner")}>
                     Победитель
+                  </Button>
+                  <Button size="s" mode="secondary" appearance="negative" onClick={() => deleteWork(w.id, `#${posterLabel(w.posterNo)} «${w.title}»`)}>
+                    Удалить
                   </Button>
                 </div>
               </div>
