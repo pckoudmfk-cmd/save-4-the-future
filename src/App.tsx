@@ -1115,9 +1115,12 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
   };
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState({ displayName: "", password: "" });
-  const startEdit = (a: { id: number; display_name: string | null }) => {
+  const startEdit = (a: { id: number; username: string; display_name: string | null }) => {
     setEditingId(a.id);
-    setEditDraft({ displayName: a.display_name || "", password: "" });
+    // display_name defaults to the username itself at account creation, so
+    // if it was never set to anything else, the field should open empty —
+    // otherwise it reads back as the login and looks like a login field.
+    setEditDraft({ displayName: a.display_name && a.display_name !== a.username ? a.display_name : "", password: "" });
     setMessage("");
   };
   const saveEdit = async () => {
@@ -1269,16 +1272,19 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
           {accounts.map((a) =>
             editingId === a.id ? (
               <Div key={a.id} className="accountEditRow">
+                <Text className="muted">
+                  Логин: <b>{a.username}</b> — логин здесь не меняется, он останется прежним.
+                </Text>
                 <Input
                   value={editDraft.displayName}
                   onChange={(e) => setEditDraft({ ...editDraft, displayName: e.target.value })}
-                  placeholder="Имя (ФИО члена жюри)"
+                  placeholder="ФИО члена жюри (логин и пароль не затрагиваются)"
                 />
                 <Input
                   type="password"
                   value={editDraft.password}
                   onChange={(e) => setEditDraft({ ...editDraft, password: e.target.value })}
-                  placeholder="Новый пароль (оставьте пустым, если менять не нужно)"
+                  placeholder="Новый пароль — оставьте это поле пустым, если пароль менять не нужно"
                 />
                 <div className="adminActions">
                   <Button size="s" mode="primary" onClick={saveEdit}>
