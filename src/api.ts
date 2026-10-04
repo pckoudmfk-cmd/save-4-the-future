@@ -34,7 +34,18 @@ async function request<T = any>(path: string, options: RequestInit = {}): Promis
 // Vercel backend (api/, Postgres, image_key = a full Vercel Blob URL).
 function normalizeSubmission(row: any): Submission {
   const imageKey = row.image_key ?? row.imageUrl ?? "";
-  const imageUrl = imageKey ? (/^https?:\/\//.test(imageKey) ? imageKey : `${BASE}/api/${imageKey.replace(/^\/?/, "")}`) : undefined;
+  // Poster files live in Vercel Blob, whose own host is unreachable for some
+  // visitors in Russia even though the site itself opens. The same files are
+  // served through this site's own domain via a rewrite (/img/ in vercel.json),
+  // so the images load from the address the visitor already reached.
+  const blobHost = "https://hntiqnhhpgux6skx.public.blob.vercel-storage.com/";
+  const imageUrl = imageKey
+    ? imageKey.startsWith(blobHost)
+      ? `/img/${imageKey.slice(blobHost.length)}`
+      : /^https?:\/\//.test(imageKey)
+        ? imageKey
+        : `${BASE}/api/${imageKey.replace(/^\/?/, "")}`
+    : undefined;
   return {
     id: row.id,
     posterNo: row.poster_no ?? row.posterNo,

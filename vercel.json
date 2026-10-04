@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/:match*", "destination": "/api" }
+    { "source": "/api/:match*", "destination": "/api" },
+    { "source": "/img/:path*", "destination": "https://hntiqnhhpgux6skx.public.blob.vercel-storage.com/:path*" }
   ]
 }
