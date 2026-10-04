@@ -227,12 +227,13 @@ function Home({ setView }: { setView: (v: View) => void }) {
     </>
   );
 }
-function Page({ title, lead, children }: { title: string; lead?: string; children?: ReactNode }) {
+function Page({ title, lead, note, children }: { title: string; lead?: string; note?: ReactNode; children?: ReactNode }) {
   return (
     <main className="page">
       <div className="pageHead">
         <Title level="1">{title}</Title>
         {lead && <Text className="lead">{lead}</Text>}
+        {note && <div className="leadNote">{note}</div>}
       </div>
       {children}
     </main>
@@ -632,7 +633,21 @@ function Join() {
     }
   };
   return (
-    <Page title="Подать работу" lead="Один конкурсный постер. Одна сильная идея. Один главный посыл.">
+    <Page
+      title="Подать работу"
+      lead="Один конкурсный постер. Одна сильная идея. Один главный посыл."
+      note={
+        <>
+          <p>
+            <b>Не повторяйте то, что уже видели.</b> Создайте постер, которого раньше не было, добавьте в него QR-код, и ваша идея оживёт.
+          </p>
+          <p>
+            Что он может открывать? Калькулятор, который покажет, сколько можно накопить за год. Короткий тест на финансовую грамотность. Мини-игру про осознанные траты. Челлендж «накопи на мечту за 30 дней». Или собственную идею, которую никто не предложил.
+          </p>
+          <p>Работы с интерактивом привлекут внимание не только жюри, но и широкой аудитории.</p>
+        </>
+      }
+    >
       <div className="filters">
         <Button mode={tab === "form" ? "primary" : "secondary"} onClick={() => setTab("form")}>
           Форма заявки
