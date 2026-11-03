@@ -112,42 +112,64 @@ function WinnersSection({ setView }: { setView: (v: View) => void }) {
     };
   }, []);
   if (winners.length === 0) return null;
+  // A nomination typed as "1 место", "2-е место", "3rd place", "II" and similar is a podium place;
+  // everything else (GRAND PRIX, BEST ENGLISH POSTER, ...) is a nomination laureate.
+  const placeOf = (n?: string): number => {
+    const t = (n || "").trim().toLowerCase();
+    const m = t.match(/^([123])\s*(?:-?(?:е|й|st|nd|rd))?\s*(?:место|place)?$/) || t.match(/^(i{1,3})\s*(?:место|place)?$/);
+    if (!m) return 0;
+    return m[1].length > 1 || m[1] === "i" ? m[1].length : Number(m[1]);
+  };
   const rank = (n?: string) => {
     const i = NOMINATIONS.indexOf((n || "").toUpperCase());
     return i === -1 ? NOMINATIONS.length : i;
   };
-  const sorted = [...winners].sort((a, b) => rank(a.nomination) - rank(b.nomination) || a.posterNo - b.posterNo);
+  const podium = winners.filter((w) => placeOf(w.nomination) > 0).sort((a, b) => placeOf(a.nomination) - placeOf(b.nomination) || a.posterNo - b.posterNo);
+  const laureates = winners.filter((w) => placeOf(w.nomination) === 0).sort((a, b) => rank(a.nomination) - rank(b.nomination) || a.posterNo - b.posterNo);
+  const card = (w: Submission) => {
+    const place = placeOf(w.nomination);
+    return (
+      <button
+        key={w.id}
+        className={"winnerCard" + (place ? " winnerCard-place" + place : "")}
+        onClick={() => {
+          sessionStorage.setItem("poster", w.id);
+          setView("poster");
+        }}
+      >
+        <div className="winnerThumb">
+          {w.imageUrl ? <img src={w.imageUrl} alt={w.title} loading="lazy" /> : <span>#{posterLabel(w.posterNo)}</span>}
+        </div>
+        <div className="winnerBody">
+          <em>{place ? place + " МЕСТО" : w.nomination || "ЛАУРЕАТ"}</em>
+          <b>{w.title}</b>
+          <small>
+            #{posterLabel(w.posterNo)}
+            {w.author ? " · " + w.author : ""}
+            {w.author && w.group ? " · " + w.group : ""}
+          </small>
+        </div>
+      </button>
+    );
+  };
   return (
     <section className="winnersSection" aria-labelledby="winnersTitle">
       <div className="winnersHead">
         <span className="winnersKicker">WORLD SAVINGS DAY 2026</span>
         <h2 id="winnersTitle">Победители конкурса 2026</h2>
       </div>
-      <div className="winnersGrid">
-        {sorted.map((w) => (
-          <button
-            key={w.id}
-            className="winnerCard"
-            onClick={() => {
-              sessionStorage.setItem("poster", w.id);
-              setView("poster");
-            }}
-          >
-            <div className="winnerThumb">
-              {w.imageUrl ? <img src={w.imageUrl} alt={w.title} loading="lazy" /> : <span>#{posterLabel(w.posterNo)}</span>}
-            </div>
-            <div className="winnerBody">
-              <em>{w.nomination || "ПОБЕДИТЕЛЬ"}</em>
-              <b>{w.title}</b>
-              <small>
-                #{posterLabel(w.posterNo)}
-                {w.author ? " · " + w.author : ""}
-                {w.author && w.group ? " · " + w.group : ""}
-              </small>
-            </div>
-          </button>
-        ))}
-      </div>
+      {podium.length > 0 && (
+        <>
+          <h3 className="winnersGroup">Победители</h3>
+          <div className="winnersGrid">{podium.map(card)}</div>
+        </>
+      )}
+      {laureates.length > 0 && (
+        <>
+          <h3 className="winnersGroup">Лауреаты в номинациях</h3>
+          <div className="winnersGrid">{laureates.map(card)}</div>
+        </>
+      )}
     </section>
   );
 }
@@ -1070,7 +1092,7 @@ function Admin() {
 }
 
 // The nominations announced on the "О конкурсе" page; the organizer may also type her own.
-const NOMINATIONS = ["GRAND PRIX", "BEST COMMUNICATION IDEA", "BEST ENGLISH POSTER", "BEST DIGITAL DESIGN", "BEST INTERACTIVE POSTER", "AUDIENCE CHOICE"];
+const NOMINATIONS = ["1 место", "2 место", "3 место", "GRAND PRIX", "BEST COMMUNICATION IDEA", "BEST ENGLISH POSTER", "BEST DIGITAL DESIGN", "BEST INTERACTIVE POSTER", "AUDIENCE CHOICE"];
 
 const statusLabel: Record<Submission["status"], string> = {
   moderation: "НА МОДЕРАЦИИ",

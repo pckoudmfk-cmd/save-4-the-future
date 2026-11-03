@@ -285,3 +285,12 @@ input,textarea,select{font-size:16px}
 .winnerBody b{font-size:17px;line-height:1.25;color:#06425b}
 .winnerBody small{color:#5d777c;font-size:12.5px}
 @media(max-width:760px){.winnersSection{padding:4px 12px 22px}.winnersGrid{grid-template-columns:1fr}.winnerControl{padding:0 14px 14px}.winnerInput{flex-basis:100%}}
+.winnersGroup{margin:18px 0 12px;padding:0 2px;font-size:clamp(18px,2vw,22px);letter-spacing:.3px;color:#087ea5;display:flex;align-items:center;gap:12px}
+.winnersGroup:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(8,126,165,.35),transparent)}
+.winnersGroup + .winnersGrid + .winnersGroup{margin-top:30px}
+.winnerCard-place1{border-color:#d9ae45;box-shadow:0 8px 0 rgba(217,174,69,.22),0 18px 30px rgba(120,86,8,.18)}
+.winnerCard-place2{border-color:#9fb0b8;box-shadow:0 8px 0 rgba(130,150,160,.22),0 18px 30px rgba(60,80,90,.16)}
+.winnerCard-place3{border-color:#c98a56;box-shadow:0 8px 0 rgba(201,138,86,.22),0 18px 30px rgba(110,64,28,.16)}
+.winnerCard-place1 .winnerBody em{background:linear-gradient(135deg,#f6e3a1,#d4a22f);color:#5a4106}
+.winnerCard-place2 .winnerBody em{background:linear-gradient(135deg,#eef2f4,#aebbc2);color:#31444c}
+.winnerCard-place3 .winnerBody em{background:linear-gradient(135deg,#f1c9a1,#c07f48);color:#4f2a0d}
