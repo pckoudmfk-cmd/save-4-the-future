@@ -1109,6 +1109,7 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
   const [newAccount, setNewAccount] = useState({ username: "", password: "", displayName: "", role: "jury" as Role });
   const [message, setMessage] = useState("");
   const [nominationDraft, setNominationDraft] = useState<Record<string, string>>({});
+  const [backupBusy, setBackupBusy] = useState(false);
   const [namesRevealed, setNamesRevealedState] = useState<boolean | null>(null);
   const [revealBusy, setRevealBusy] = useState(false);
   const [scoreRows, setScoreRows] = useState<Awaited<ReturnType<typeof api.adminScores>>["scores"] | null>(null);
@@ -1169,6 +1170,32 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
       } else {
         setMessage("Не удалось изменить статус. Проверьте соединение и попробуйте ещё раз.");
       }
+    }
+  };
+  const downloadBackup = async () => {
+    setMessage("");
+    setBackupBusy(true);
+    try {
+      const data = await api.exportData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `save4future-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      setMessage("Копия данных скачана. Проверьте папку «Загрузки» и сохраните файл в надёжное место.");
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : "";
+      setMessage(
+        reason === "unauthorized" || reason === "forbidden"
+          ? "Сессия администратора истекла — выйдите и войдите заново."
+          : "Не удалось подготовить копию данных. Проверьте соединение и попробуйте ещё раз."
+      );
+    } finally {
+      setBackupBusy(false);
     }
   };
   const saveWinner = async (id: string, nomination: string) => {
@@ -1294,6 +1321,22 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
           </div>
         </Div>
       </Card>
+      <Card className="revealCard">
+        <Div>
+          <div className="revealHead">
+            <div>
+              <b>Резервная копия данных</b>
+              <Text className="muted">
+                Файл со всеми работами, номинациями, оценками жюри и списком аккаунтов (без паролей). Храните его в надёжном месте. Картинки постеров остаются в
+                хранилище сайта, в файле на них даны ссылки.
+              </Text>
+            </div>
+            <Button mode="secondary" disabled={backupBusy} onClick={downloadBackup}>
+              {backupBusy ? "Готовим файл…" : "Скачать копию данных"}
+            </Button>
+          </div>
+        </Div>
+      </Card>
       <div className="filters">
         <Button mode={tab === "moderation" ? "primary" : "secondary"} onClick={() => setTab("moderation")}>
           Модерация
@@ -1305,7 +1348,9 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
           Оценки жюри
         </Button>
       </div>
-      {message && <Text className={message.startsWith("Аккаунт создан") ? "success" : "error"}>{message}</Text>}
+      {message && (
+        <Text className={/^(Аккаунт создан|Победитель отмечен|Отметка победителя снята|Копия данных скачана)/.test(message) ? "success" : "error"}>{message}</Text>
+      )}
 
       {tab === "scores" ? (
         <div className="resultList">

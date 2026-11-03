@@ -292,6 +292,36 @@ app.get(
   })
 );
 
+// ---- admin: full data export for backups (organizer only) ----
+// Everything the contest has stored, in one JSON document: submissions with all
+// columns (incl. author/contact), each juror's scores, the winners' nominations
+// and the site settings, plus the account list WITHOUT password hashes. Poster
+// images stay in blob storage; the file carries their URLs.
+app.get(
+  "/api/admin/export",
+  asyncRoute(async (req, res) => {
+    requireRole(req, SESSION_SECRET, ["organizer"]);
+    const subs = await pool.query(`SELECT ${ALL_COLUMNS.join(",")} FROM submissions ORDER BY poster_no ASC`);
+    const scores = await pool.query(
+      `SELECT sc.submission_id, sc.jury_user_id, u.username, u.display_name,
+              sc.idea, sc.english, sc.originality, sc.design, sc.digital, sc.created_at
+       FROM scores sc LEFT JOIN users u ON u.id::text = sc.jury_user_id
+       ORDER BY sc.submission_id, sc.jury_user_id`
+    );
+    const users = await pool.query("SELECT id, username, role, display_name, created_at FROM users ORDER BY id");
+    const settings = await pool.query("SELECT key, value FROM settings ORDER BY key");
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      exportedAt: new Date().toISOString(),
+      note: "Backup of SAVE 4 THE FUTURE data. Password hashes are not included. Poster images are stored in blob storage and referenced by image_key.",
+      submissions: withNominations(subs.rows, await readNominations()),
+      scores: scores.rows,
+      users: users.rows,
+      settings: settings.rows,
+    });
+  })
+);
+
 // ---- submissions: list ----
 // The organizer gets full data (every status, all columns incl. author) only
 // when explicitly asking for the admin view (?view=admin) — the moderation

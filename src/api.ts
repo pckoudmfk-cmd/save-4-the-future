@@ -138,6 +138,9 @@ export const api = {
       }>;
     }>("/api/admin/scores"),
 
+  // Organizer-only full backup of everything stored (no password hashes).
+  exportData: () => request<Record<string, unknown>>("/api/admin/export"),
+
   listAccounts: () => request<{ users: Account[] }>("/api/admin/users").then((r) => r.users),
   // For an account that already exists (e.g. to add a jury member's name
   // after the fact, or reset a forgotten password) — never creates a new
