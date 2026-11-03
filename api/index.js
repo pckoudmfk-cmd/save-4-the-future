@@ -41,6 +41,21 @@ async function namesRevealed() {
   return (await getSetting("names_revealed", "false")) === "true";
 }
 const STATUS_VALUES = ["published", "rework", "rejected", "winner"];
+
+// Winners' nominations live in the existing key/value settings table as one JSON
+// object {submissionId: "BEST ENGLISH POSTER", ...}, so no schema change is needed.
+// Only rows whose status is currently 'winner' ever get a nomination attached.
+async function readNominations() {
+  try {
+    const parsed = JSON.parse(await getSetting("winner_nominations", "{}"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+function withNominations(rows, nominations) {
+  return rows.map((r) => (r.status === "winner" ? { ...r, nomination: nominations[r.id] || "" } : r));
+}
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 const app = express();
@@ -296,7 +311,19 @@ app.get(
       ? `SELECT ${cols} FROM submissions ORDER BY created_at DESC`
       : `SELECT ${cols} FROM submissions WHERE status IN ('published','winner') ORDER BY created_at DESC`;
     const { rows } = await pool.query(sql);
-    res.json({ submissions: rows });
+    res.json({ submissions: withNominations(rows, await readNominations()) });
+  })
+);
+
+// ---- winners: public list for the home page ("Победители конкурса 2026") ----
+// Same visibility rules as the gallery: author names only after the organizer
+// has revealed them, contact details never.
+app.get(
+  "/api/winners",
+  asyncRoute(async (req, res) => {
+    const cols = ((await namesRevealed()) ? PUBLIC_COLUMNS_WITH_NAMES : PUBLIC_COLUMNS).join(",");
+    const { rows } = await pool.query(`SELECT ${cols} FROM submissions WHERE status='winner' ORDER BY poster_no ASC`);
+    res.json({ winners: withNominations(rows, await readNominations()) });
   })
 );
 
@@ -312,7 +339,7 @@ app.get(
       : `SELECT ${cols} FROM submissions WHERE id=$1 AND status IN ('published','winner')`;
     const { rows } = await pool.query(sql, [req.params.id]);
     if (!rows[0]) return res.status(404).json({ error: "not_found" });
-    res.json(rows[0]);
+    res.json(withNominations(rows, await readNominations())[0]);
   })
 );
 
@@ -347,6 +374,28 @@ app.patch(
     if (!STATUS_VALUES.includes(b.status)) return res.status(400).json({ error: "invalid_status" });
     await pool.query("UPDATE submissions SET status=$1 WHERE id=$2", [b.status, req.params.id]);
     res.json({ ok: true });
+  })
+);
+
+// ---- submissions: mark as a winner with a nomination (organizer only) ----
+// An empty nomination removes the winner mark and returns the poster to "published".
+app.put(
+  "/api/submissions/:id/winner",
+  asyncRoute(async (req, res) => {
+    requireRole(req, SESSION_SECRET, ["organizer"]);
+    const nomination = String((req.body || {}).nomination || "").trim().slice(0, 120);
+    const { rows } = await pool.query("SELECT id FROM submissions WHERE id=$1", [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: "not_found" });
+    const nominations = await readNominations();
+    if (nomination) {
+      nominations[req.params.id] = nomination;
+      await pool.query("UPDATE submissions SET status='winner' WHERE id=$1", [req.params.id]);
+    } else {
+      delete nominations[req.params.id];
+      await pool.query("UPDATE submissions SET status='published' WHERE id=$1 AND status='winner'", [req.params.id]);
+    }
+    await setSetting("winner_nominations", JSON.stringify(nominations));
+    res.json({ ok: true, nomination });
   })
 );
 

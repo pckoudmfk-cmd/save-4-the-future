@@ -267,3 +267,21 @@ input,textarea,select{font-size:16px}
 .juryGate{padding:30px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
 .gateIcon{font-size:34px}
 .leadNote{margin-top:18px;padding:4px 0 4px 18px;border-left:3px solid var(--mint,#6be0d6);max-width:900px}.leadNote p{margin:0 0 10px;color:#cfe3e4;font-size:16px;line-height:1.6}.leadNote p:last-child{margin-bottom:0}.leadNote b{color:#fff}@media(max-width:760px){.leadNote{margin-top:14px;padding-left:14px}.leadNote p{font-size:15px}}
+.winnerControl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 16px 16px}
+.winnerControlLabel{flex:1 1 100%;font-size:12px;font-weight:800;letter-spacing:.6px;color:#8fd9d0}
+.winnerInput{flex:1 1 260px;min-width:0;height:36px;padding:0 12px;border-radius:10px;border:1px solid rgba(111,210,198,.4);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:14px}
+.winnersSection{max-width:1548px;margin:0 auto;padding:6px 18px 26px;background:#f5faf8}
+.winnersHead{padding:8px 0 14px}
+.winnersKicker{display:block;font-size:11px;font-weight:950;letter-spacing:1.8px;color:#0b7a8e}
+.winnersHead h2{margin:6px 0 0;font-size:clamp(26px,3.2vw,38px);line-height:1.1;color:#06425b;letter-spacing:-.5px}
+.winnersGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.winnerCard{display:flex;flex-direction:column;text-align:left;padding:0;border:1px solid rgba(38,155,169,.28);border-radius:20px;overflow:hidden;background:#fff;cursor:pointer;box-shadow:0 8px 0 rgba(3,62,79,.08),0 16px 26px rgba(5,63,78,.12);transition:.2s;font:inherit;color:inherit}
+.winnerCard:hover{transform:translateY(-4px)}
+.winnerThumb{aspect-ratio:4/3;background:#0a222c;display:grid;place-items:center;overflow:hidden}
+.winnerThumb img{width:100%;height:100%;object-fit:cover;display:block}
+.winnerThumb span{color:#6fd2c6;font-weight:800}
+.winnerBody{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px}
+.winnerBody em{align-self:flex-start;font-style:normal;font-size:11px;font-weight:950;letter-spacing:1.2px;color:#6b4f08;background:linear-gradient(135deg,#f3dd9a,#d9ae45);padding:5px 10px;border-radius:999px}
+.winnerBody b{font-size:17px;line-height:1.25;color:#06425b}
+.winnerBody small{color:#5d777c;font-size:12.5px}
+@media(max-width:760px){.winnersSection{padding:4px 12px 22px}.winnersGrid{grid-template-columns:1fr}.winnerControl{padding:0 14px 14px}.winnerInput{flex-basis:100%}}

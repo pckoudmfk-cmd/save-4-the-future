@@ -64,6 +64,7 @@ function normalizeSubmission(row: any): Submission {
     status: row.status,
     createdAt: row.created_at ?? row.createdAt,
     audience: row.audience_count ?? row.audience ?? 0,
+    nomination: row.nomination ?? "",
   };
 }
 
@@ -95,6 +96,12 @@ export const api = {
   setStatus: (id: string, status: Submission["status"]) => request<{ ok: true }>("/api/submissions/" + id + "/status", { method: "PATCH", body: JSON.stringify({ status }) }),
   // Organizer only — removes a submission (e.g. a duplicate) and closes the
   // gap in poster numbering the server's renumbering pass leaves behind.
+  // Organizer only — marks a poster as a winner in the given nomination.
+  // An empty nomination removes the mark again.
+  setWinner: (id: string, nomination: string) =>
+    request<{ ok: true; nomination: string }>("/api/submissions/" + id + "/winner", { method: "PUT", body: JSON.stringify({ nomination }) }),
+  // Public: the posters marked as winners, for the home page block.
+  winners: () => request<{ winners: any[] }>("/api/winners").then((r) => r.winners.map(normalizeSubmission)),
   deleteSubmission: (id: string) => request<{ ok: true }>("/api/submissions/" + id, { method: "DELETE" }),
   score: (id: string, score: Score) => request<{ ok: true; total: number }>("/api/submissions/" + id + "/score", { method: "PUT", body: JSON.stringify(score) }),
   // The calling juror's own previously saved scores, keyed by submission —

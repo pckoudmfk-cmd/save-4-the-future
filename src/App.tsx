@@ -92,6 +92,66 @@ function Hero({ setView }: { setView: (v: View) => void }) {
     </section>
   );
 }
+// "Победители конкурса 2026" on the home page. Renders nothing until the organizer
+// has marked at least one winner, so the page is unchanged before results are announced.
+function WinnersSection({ setView }: { setView: (v: View) => void }) {
+  const [winners, setWinners] = useState<Submission[]>([]);
+  useEffect(() => {
+    if (!hasApi()) return;
+    let cancelled = false;
+    api
+      .winners()
+      .then((list) => {
+        if (!cancelled) setWinners(list);
+      })
+      .catch(() => {
+        /* the block simply stays hidden */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (winners.length === 0) return null;
+  const rank = (n?: string) => {
+    const i = NOMINATIONS.indexOf((n || "").toUpperCase());
+    return i === -1 ? NOMINATIONS.length : i;
+  };
+  const sorted = [...winners].sort((a, b) => rank(a.nomination) - rank(b.nomination) || a.posterNo - b.posterNo);
+  return (
+    <section className="winnersSection" aria-labelledby="winnersTitle">
+      <div className="winnersHead">
+        <span className="winnersKicker">WORLD SAVINGS DAY 2026</span>
+        <h2 id="winnersTitle">Победители конкурса 2026</h2>
+      </div>
+      <div className="winnersGrid">
+        {sorted.map((w) => (
+          <button
+            key={w.id}
+            className="winnerCard"
+            onClick={() => {
+              sessionStorage.setItem("poster", w.id);
+              setView("poster");
+            }}
+          >
+            <div className="winnerThumb">
+              {w.imageUrl ? <img src={w.imageUrl} alt={w.title} loading="lazy" /> : <span>#{posterLabel(w.posterNo)}</span>}
+            </div>
+            <div className="winnerBody">
+              <em>{w.nomination || "ПОБЕДИТЕЛЬ"}</em>
+              <b>{w.title}</b>
+              <small>
+                #{posterLabel(w.posterNo)}
+                {w.author ? " · " + w.author : ""}
+                {w.author && w.group ? " · " + w.group : ""}
+              </small>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ApprovedCover({ setView }: { setView: (v: View) => void }) {
   const labels = {
     home: "Главная",
@@ -198,6 +258,7 @@ function ApprovedCover({ setView }: { setView: (v: View) => void }) {
             </b>
           </div>
         </section>
+        <WinnersSection setView={setView} />
         <footer className="coverFooter">
           <span>{labels.foot}</span>
         </footer>
@@ -1008,6 +1069,9 @@ function Admin() {
   );
 }
 
+// The nominations announced on the "О конкурсе" page; the organizer may also type her own.
+const NOMINATIONS = ["GRAND PRIX", "BEST COMMUNICATION IDEA", "BEST ENGLISH POSTER", "BEST DIGITAL DESIGN", "BEST INTERACTIVE POSTER", "AUDIENCE CHOICE"];
+
 const statusLabel: Record<Submission["status"], string> = {
   moderation: "НА МОДЕРАЦИИ",
   published: "ОПУБЛИКОВАНО",
@@ -1022,6 +1086,7 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
   const [accounts, setAccounts] = useState<{ id: number; username: string; role: Role; display_name: string | null }[]>([]);
   const [newAccount, setNewAccount] = useState({ username: "", password: "", displayName: "", role: "jury" as Role });
   const [message, setMessage] = useState("");
+  const [nominationDraft, setNominationDraft] = useState<Record<string, string>>({});
   const [namesRevealed, setNamesRevealedState] = useState<boolean | null>(null);
   const [revealBusy, setRevealBusy] = useState(false);
   const [scoreRows, setScoreRows] = useState<Awaited<ReturnType<typeof api.adminScores>>["scores"] | null>(null);
@@ -1082,6 +1147,25 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
       } else {
         setMessage("Не удалось изменить статус. Проверьте соединение и попробуйте ещё раз.");
       }
+    }
+  };
+  const saveWinner = async (id: string, nomination: string) => {
+    setMessage("");
+    try {
+      await api.setWinner(id, nomination);
+      setNominationDraft((d) => {
+        const { [id]: _drop, ...rest } = d;
+        return rest;
+      });
+      await loadWorks();
+      setMessage(nomination ? "Победитель отмечен. Он появится на главной странице в блоке «Победители конкурса 2026»." : "Отметка победителя снята.");
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : "";
+      setMessage(
+        reason === "unauthorized" || reason === "forbidden"
+          ? "Сессия администратора истекла — выйдите и войдите заново."
+          : "Не удалось сохранить победителя. Проверьте соединение и попробуйте ещё раз."
+      );
     }
   };
   const deleteWork = async (id: string, label: string) => {
@@ -1240,6 +1324,11 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
         </div>
       ) : tab === "moderation" ? (
         <div className="resultList">
+          <datalist id="nominationList">
+            {NOMINATIONS.map((n) => (
+              <option key={n} value={n} />
+            ))}
+          </datalist>
           {works.map((w) => (
             <Card key={w.id}>
               <div className="adminRow">
@@ -1262,14 +1351,38 @@ function AdminWorkspace({ name, logout }: { name: string; logout: () => void }) 
                   <Button size="s" mode="secondary" onClick={() => setStatus(w.id, "rejected")}>
                     Отклонить
                   </Button>
-                  <Button size="s" mode="secondary" onClick={() => setStatus(w.id, "winner")}>
-                    Победитель
-                  </Button>
                   <Button size="s" mode="secondary" appearance="negative" onClick={() => deleteWork(w.id, `#${posterLabel(w.posterNo)} «${w.title}»`)}>
                     Удалить
                   </Button>
                 </div>
               </div>
+              {(w.status === "published" || w.status === "winner") && (
+                <div className="winnerControl">
+                  <span className="winnerControlLabel">
+                    {w.status === "winner" ? `Победитель · ${w.nomination || "номинация не указана"}` : "Отметить победителем"}
+                  </span>
+                  <input
+                    className="winnerInput"
+                    list="nominationList"
+                    placeholder="Номинация, например GRAND PRIX"
+                    value={nominationDraft[w.id] ?? w.nomination ?? ""}
+                    onChange={(e) => setNominationDraft({ ...nominationDraft, [w.id]: e.target.value })}
+                  />
+                  <Button
+                    size="s"
+                    mode="primary"
+                    disabled={!(nominationDraft[w.id] ?? w.nomination ?? "").trim()}
+                    onClick={() => saveWinner(w.id, (nominationDraft[w.id] ?? w.nomination ?? "").trim())}
+                  >
+                    {w.status === "winner" ? "Сохранить номинацию" : "Назначить победителем"}
+                  </Button>
+                  {w.status === "winner" && (
+                    <Button size="s" mode="secondary" onClick={() => saveWinner(w.id, "")}>
+                      Снять отметку
+                    </Button>
+                  )}
+                </div>
+              )}
             </Card>
           ))}
           {works.length === 0 && <Text className="muted">Работ пока нет.</Text>}
